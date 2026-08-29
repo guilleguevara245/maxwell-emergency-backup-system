@@ -20,7 +20,7 @@ class Medico:
 
     def guardar(self):
         """
-        Inserta el médico en la base de datos y le asigna el id generado.
+        Inserta el medico en la base de datos y le asigna el id generado.
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -36,7 +36,7 @@ class Medico:
     @staticmethod
     def listar_todos():
         """
-        Devuelve una lista con todos los médicos registrados.
+        Devuelve una lista con todos los medicos registrados.
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -52,7 +52,7 @@ class Medico:
     @staticmethod
     def buscar_por_id(id_medico):
         """
-        Busca un médico por su id. Devuelve None si no existe.
+        Busca un medico por su id. Devuelve None si no existe.
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -70,8 +70,8 @@ class Medico:
     @staticmethod
     def listar_por_especialidad(especialidad):
         """
-        Devuelve los médicos que coinciden con una especialidad dada.
-        Útil más adelante para el sistema de turnos.
+        Devuelve los medicos que coinciden con una especialidad dada.
+
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -86,7 +86,7 @@ class Medico:
 
     def actualizar(self):
         """
-        Actualiza los datos del médico en la base de datos (usa self.id).
+        Actualiza los datos del medico en la base de datos (usa self.id).
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -100,7 +100,7 @@ class Medico:
     @staticmethod
     def eliminar(id_medico):
         """
-        Elimina un médico de la base de datos según su id.
+        Elimina un medico de la base de datos segun su id.
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()

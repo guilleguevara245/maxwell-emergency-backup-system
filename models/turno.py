@@ -2,7 +2,7 @@
 Maxwell Medic System — by Guillermo Guevara
 
 Modelo de Turno: representa la entidad y sus operaciones,
-incluyendo la validación de disponibilidad horaria del médico.
+incluyendo la validacion de disponibilidad horaria del medico.
 """
 
 from database import obtener_conexion
@@ -28,7 +28,7 @@ class Turno:
     @staticmethod
     def existe_solapamiento(medico_id, fecha, hora):
         """
-        Devuelve True si el médico ya tiene un turno (no cancelado)
+        Devuelve True si el medico ya tiene un turno (no cancelado)
         agendado en esa misma fecha y hora.
         """
         conexion = obtener_conexion()
@@ -47,12 +47,12 @@ class Turno:
     def guardar(self):
         """
         Inserta el turno en la base de datos, validando antes que
-        el médico esté disponible en esa fecha y hora.
+        el medico este disponible en esa fecha y hora.
         Lanza un ValueError si ya existe un turno solapado.
         """
         if Turno.existe_solapamiento(self.medico_id, self.fecha, self.hora):
             raise ValueError(
-                f"El médico {self.medico_id} ya tiene un turno el {self.fecha} a las {self.hora}."
+                f"El medico {self.medico_id} ya tiene un turno el {self.fecha} a las {self.hora}."
             )
 
         conexion = obtener_conexion()
@@ -122,7 +122,7 @@ class Turno:
         Cambia el estado del turno (ej: cancelar, marcar como atendido).
         """
         if nuevo_estado not in Turno.ESTADOS_VALIDOS:
-            raise ValueError(f"Estado inválido: {nuevo_estado}")
+            raise ValueError(f"Estado invalido: {nuevo_estado}")
 
         conexion = obtener_conexion()
         cursor = conexion.cursor()
