@@ -6,6 +6,7 @@ incluyendo la validacion de disponibilidad horaria del medico.
 """
 
 from database import obtener_conexion
+from utils.validaciones import validar_fecha, validar_hora, fecha_iso_a_visual
 
 
 class Turno:
@@ -22,7 +23,7 @@ class Turno:
         self.motivo = motivo
 
     def __str__(self):
-        return (f"[{self.id}] {self.fecha} {self.hora} — "
+        return (f"[{self.id}] {fecha_iso_a_visual(self.fecha)} {self.hora} — "
                 f"Paciente {self.paciente_id} / Medico {self.medico_id} — {self.estado}")
 
     @staticmethod
@@ -52,6 +53,9 @@ class Turno:
         """
         if not self.motivo or not self.motivo.strip():
             raise ValueError("El motivo de consulta es obligatorio.")
+
+        validar_fecha(self.fecha)
+        validar_hora(self.hora)
 
         if Turno.existe_solapamiento(self.medico_id, self.fecha, self.hora):
             raise ValueError(
@@ -125,7 +129,7 @@ class Turno:
         Cambia el estado del turno (ej: cancelar, marcar como atendido).
         """
         if nuevo_estado not in Turno.ESTADOS_VALIDOS:
-            raise ValueError(f"Estado invalido: {nuevo_estado}")
+            raise ValueError(f"Estado inválido: {nuevo_estado}")
 
         conexion = obtener_conexion()
         cursor = conexion.cursor()

@@ -6,6 +6,7 @@ contra la base de datos (crear, leer, actualizar, borrar).
 """
 
 from database import obtener_conexion
+from utils.validaciones import validar_dni, validar_email, validar_telefono, validar_telefono_fijo
 
 
 class Paciente:
@@ -24,7 +25,13 @@ class Paciente:
     def guardar(self):
         """
         Inserta el paciente en la base de datos y le asigna el id generado.
+        Valida el formato de DNI, telefono y email antes de guardar.
         """
+        validar_dni(self.dni)
+        validar_telefono(self.telefono)
+        validar_email(self.email)
+        validar_telefono_fijo(self.telefono_fijo)
+
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(
@@ -82,7 +89,13 @@ class Paciente:
     def actualizar(self):
         """
         Actualiza los datos del paciente en la base de datos (usa self.id).
+        Valida el formato de DNI, telefono y email antes de actualizar.
         """
+        validar_dni(self.dni)
+        validar_telefono(self.telefono)
+        validar_email(self.email)
+        validar_telefono_fijo(self.telefono_fijo)
+
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(

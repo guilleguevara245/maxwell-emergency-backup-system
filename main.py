@@ -9,10 +9,11 @@ from database import crear_tablas
 from models.paciente import Paciente
 from models.medico import Medico
 from models.turno import Turno
+from utils.validaciones import fecha_visual_a_iso
 
 
 def pausar():
-    input("\nPresione Enter para continuar...")
+    input("\nPresiona Enter para continuar...")
 
 
 # ---------- MENÚ DE PACIENTES ----------
@@ -31,10 +32,11 @@ def menu_pacientes():
             nombre = input("Nombre: ").strip()
             apellido = input("Apellido: ").strip()
             dni = input("DNI: ").strip()
-            telefono = input("Telefono (opcional): ").strip() or None
-            email = input("Email (opcional): ").strip() or None
+            telefono = input("Telefono (celular): ").strip()
+            telefono_fijo = input("Telefono fijo (opcional): ").strip() or None
+            email = input("Email: ").strip()
             try:
-                paciente = Paciente(nombre, apellido, dni, telefono, email)
+                paciente = Paciente(nombre, apellido, dni, telefono, email, telefono_fijo)
                 paciente.guardar()
                 print(f"Paciente creado con exito: {paciente}")
             except Exception as error:
@@ -58,7 +60,8 @@ def menu_pacientes():
                 print(f"Datos actuales: {paciente}")
                 paciente.nombre = input(f"Nuevo nombre [{paciente.nombre}]: ").strip() or paciente.nombre
                 paciente.apellido = input(f"Nuevo apellido [{paciente.apellido}]: ").strip() or paciente.apellido
-                paciente.telefono = input(f"Nuevo telefono [{paciente.telefono}]: ").strip() or paciente.telefono
+                paciente.telefono = input(f"Nuevo teléfono [{paciente.telefono}]: ").strip() or paciente.telefono
+                paciente.telefono_fijo = input(f"Nuevo teléfono fijo [{paciente.telefono_fijo}]: ").strip() or paciente.telefono_fijo
                 paciente.actualizar()
                 print("Paciente actualizado.")
             pausar()
@@ -142,11 +145,12 @@ def menu_turnos():
         if opcion == "1":
             paciente_id = input("ID del paciente: ").strip()
             medico_id = input("ID del medico: ").strip()
-            fecha = input("Fecha (AAAA-MM-DD): ").strip()
+            fecha_visual = input("Fecha (DD/MM/AAAA): ").strip()
             hora = input("Hora (HH:MM): ").strip()
-            motivo = input("Motivo de consulta (opcional): ").strip() or None
+            motivo = input("Motivo de consulta: ").strip()
             try:
-                turno = Turno(paciente_id, medico_id, fecha, hora, motivo=motivo)
+                fecha_iso = fecha_visual_a_iso(fecha_visual)
+                turno = Turno(paciente_id, medico_id, fecha_iso, hora, motivo=motivo)
                 turno.guardar()
                 print(f"Turno creado con exito: {turno}")
             except ValueError as error:
@@ -154,12 +158,16 @@ def menu_turnos():
             pausar()
 
         elif opcion == "2":
-            fecha = input("Fecha a consultar (AAAA-MM-DD): ").strip()
-            turnos = Turno.listar_por_fecha(fecha)
-            if not turnos:
-                print("No hay turnos para esa fecha.")
-            for t in turnos:
-                print(t)
+            fecha_visual = input("Fecha a consultar (DD/MM/AAAA): ").strip()
+            try:
+                fecha_iso = fecha_visual_a_iso(fecha_visual)
+                turnos = Turno.listar_por_fecha(fecha_iso)
+                if not turnos:
+                    print("No hay turnos para esa fecha.")
+                for t in turnos:
+                    print(t)
+            except ValueError as error:
+                print(f"Fecha invalida: {error}")
             pausar()
 
         elif opcion == "3":
