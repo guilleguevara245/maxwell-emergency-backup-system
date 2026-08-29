@@ -11,9 +11,23 @@ from datetime import datetime
 PATRON_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+def validar_legajo(legajo):
+    """
+    Un legajo valido no esta vacio y tiene entre 3 y 10 caracteres
+    alfanumericos (permite numeros o codigos con letras, segun la
+    institucion).
+    """
+    if not legajo or not legajo.strip():
+        raise ValueError("El legajo es obligatorio.")
+    if not legajo.isalnum():
+        raise ValueError("El legajo debe contener solo letras y numeros.")
+    if not (3 <= len(legajo) <= 10):
+        raise ValueError("El legajo debe tener entre 3 y 10 caracteres.")
+
+
 def validar_dni(dni):
     """
-    Un DNI valido tiene entre 7 y 8 digitos numericos (formato argentino).
+    Un DNI válido tiene entre 7 y 8 digitos numericos (formato argentino).
     """
     if not dni or not dni.isdigit():
         raise ValueError("El DNI debe contener solo numeros.")

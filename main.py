@@ -1,5 +1,5 @@
 """
-Maxwell Medic System — by Guillermo Guevara
+Maxwell Medic System - by Guillermo Guevara
 
 Punto de entrada del sistema. Menu de consola para gestionar
 pacientes, medicos y turnos.
@@ -16,7 +16,7 @@ def pausar():
     input("\nPresiona Enter para continuar...")
 
 
-# ---------- MENÚ DE PACIENTES ----------
+# ---------- MENU DE PACIENTES ----------
 
 def menu_pacientes():
     while True:
@@ -29,9 +29,9 @@ def menu_pacientes():
         opcion = input("Elegi una opcion: ").strip()
 
         if opcion == "1":
+            dni = input("DNI: ").strip()
             nombre = input("Nombre: ").strip()
             apellido = input("Apellido: ").strip()
-            dni = input("DNI: ").strip()
             telefono = input("Telefono (celular): ").strip()
             telefono_fijo = input("Telefono fijo (opcional): ").strip() or None
             email = input("Email: ").strip()
@@ -52,23 +52,26 @@ def menu_pacientes():
             pausar()
 
         elif opcion == "3":
-            id_paciente = input("ID del paciente a actualizar: ").strip()
-            paciente = Paciente.buscar_por_id(id_paciente)
+            dni = input("DNI del paciente a actualizar: ").strip()
+            paciente = Paciente.buscar_por_dni(dni)
             if paciente is None:
-                print("No existe un paciente con ese ID.")
+                print("No existe un paciente con ese DNI.")
             else:
                 print(f"Datos actuales: {paciente}")
                 paciente.nombre = input(f"Nuevo nombre [{paciente.nombre}]: ").strip() or paciente.nombre
                 paciente.apellido = input(f"Nuevo apellido [{paciente.apellido}]: ").strip() or paciente.apellido
-                paciente.telefono = input(f"Nuevo teléfono [{paciente.telefono}]: ").strip() or paciente.telefono
-                paciente.telefono_fijo = input(f"Nuevo teléfono fijo [{paciente.telefono_fijo}]: ").strip() or paciente.telefono_fijo
-                paciente.actualizar()
-                print("Paciente actualizado.")
+                paciente.telefono = input(f"Nuevo telefono [{paciente.telefono}]: ").strip() or paciente.telefono
+                paciente.telefono_fijo = input(f"Nuevo telefono fijo [{paciente.telefono_fijo}]: ").strip() or paciente.telefono_fijo
+                try:
+                    paciente.actualizar()
+                    print("Paciente actualizado.")
+                except Exception as error:
+                    print(f"No se pudo actualizar: {error}")
             pausar()
 
         elif opcion == "4":
-            id_paciente = input("ID del paciente a eliminar: ").strip()
-            Paciente.eliminar(id_paciente)
+            dni = input("DNI del paciente a eliminar: ").strip()
+            Paciente.eliminar(dni)
             print("Paciente eliminado (si existia).")
             pausar()
 
@@ -78,7 +81,7 @@ def menu_pacientes():
             print("Opcion invalida.")
 
 
-# ---------- MENÚ DE MÉDICOS ----------
+# ---------- MENU DE MEDICOS ----------
 
 def menu_medicos():
     while True:
@@ -91,12 +94,19 @@ def menu_medicos():
         opcion = input("Elegi una opcion: ").strip()
 
         if opcion == "1":
+            legajo = input("Legajo: ").strip()
+            dni = input("DNI: ").strip()
             nombre = input("Nombre: ").strip()
             apellido = input("Apellido: ").strip()
             especialidad = input("Especialidad: ").strip()
-            medico = Medico(nombre, apellido, especialidad)
-            medico.guardar()
-            print(f"Medico creado con exito: {medico}")
+            telefono = input("Telefono (celular): ").strip()
+            email = input("Email: ").strip()
+            try:
+                medico = Medico(legajo, dni, nombre, apellido, especialidad, telefono, email)
+                medico.guardar()
+                print(f"Medico creado con exito: {medico}")
+            except Exception as error:
+                print(f"No se pudo crear el medico: {error}")
             pausar()
 
         elif opcion == "2":
@@ -117,8 +127,8 @@ def menu_medicos():
             pausar()
 
         elif opcion == "4":
-            id_medico = input("ID del medico a eliminar: ").strip()
-            Medico.eliminar(id_medico)
+            legajo = input("Legajo del medico a eliminar: ").strip()
+            Medico.eliminar(legajo)
             print("Medico eliminado (si existia).")
             pausar()
 
@@ -128,7 +138,7 @@ def menu_medicos():
             print("Opcion invalida.")
 
 
-# ---------- MENÚ DE TURNOS ----------
+# ---------- MENU DE TURNOS ----------
 
 def menu_turnos():
     while True:
@@ -143,14 +153,14 @@ def menu_turnos():
         opcion = input("Elegi una opcion: ").strip()
 
         if opcion == "1":
-            paciente_id = input("ID del paciente: ").strip()
-            medico_id = input("ID del medico: ").strip()
+            paciente_dni = input("DNI del paciente: ").strip()
+            medico_legajo = input("Legajo del medico: ").strip()
             fecha_visual = input("Fecha (DD/MM/AAAA): ").strip()
             hora = input("Hora (HH:MM): ").strip()
             motivo = input("Motivo de consulta: ").strip()
             try:
                 fecha_iso = fecha_visual_a_iso(fecha_visual)
-                turno = Turno(paciente_id, medico_id, fecha_iso, hora, motivo=motivo)
+                turno = Turno(paciente_dni, medico_legajo, fecha_iso, hora, motivo=motivo)
                 turno.guardar()
                 print(f"Turno creado con exito: {turno}")
             except ValueError as error:
@@ -171,8 +181,8 @@ def menu_turnos():
             pausar()
 
         elif opcion == "3":
-            medico_id = input("ID del medico: ").strip()
-            turnos = Turno.listar_por_medico(medico_id)
+            medico_legajo = input("Legajo del medico: ").strip()
+            turnos = Turno.listar_por_medico(medico_legajo)
             if not turnos:
                 print("No hay turnos para ese medico.")
             for t in turnos:
@@ -180,8 +190,8 @@ def menu_turnos():
             pausar()
 
         elif opcion == "4":
-            paciente_id = input("ID del paciente: ").strip()
-            turnos = Turno.listar_por_paciente(paciente_id)
+            paciente_dni = input("DNI del paciente: ").strip()
+            turnos = Turno.listar_por_paciente(paciente_dni)
             if not turnos:
                 print("No hay turnos para ese paciente.")
             for t in turnos:
@@ -190,7 +200,7 @@ def menu_turnos():
 
         elif opcion == "5":
             id_turno = input("ID del turno a cancelar: ").strip()
-            turno = _buscar_turno_por_id(id_turno)
+            turno = Turno.buscar_por_id(id_turno)
             if turno is None:
                 print("No existe un turno con ese ID.")
             else:
@@ -200,7 +210,7 @@ def menu_turnos():
 
         elif opcion == "6":
             id_turno = input("ID del turno a marcar como atendido: ").strip()
-            turno = _buscar_turno_por_id(id_turno)
+            turno = Turno.buscar_por_id(id_turno)
             if turno is None:
                 print("No existe un turno con ese ID.")
             else:
@@ -214,26 +224,7 @@ def menu_turnos():
             print("Opcion invalida.")
 
 
-def _buscar_turno_por_id(id_turno):
-    """
-    Helper interno: busca un turno por id.
-    """
-    from database import obtener_conexion
-    conexion = obtener_conexion()
-    cursor = conexion.cursor()
-    cursor.execute(
-        "SELECT id, paciente_id, medico_id, fecha, hora, estado, motivo FROM turnos WHERE id = ?",
-        (id_turno,),
-    )
-    fila = cursor.fetchone()
-    conexion.close()
-    if fila is None:
-        return None
-    return Turno(id=fila[0], paciente_id=fila[1], medico_id=fila[2],
-                 fecha=fila[3], hora=fila[4], estado=fila[5], motivo=fila[6])
-
-
-# ---------- MENÚ PRINCIPAL ----------
+# ---------- MENU PRINCIPAL ----------
 
 def menu_principal():
     crear_tablas()
@@ -252,7 +243,7 @@ def menu_principal():
         elif opcion == "3":
             menu_turnos()
         elif opcion == "4":
-            print("¡Hasta luego!")
+            print("Hasta luego!")
             break
         else:
             print("Opcion invalida.")

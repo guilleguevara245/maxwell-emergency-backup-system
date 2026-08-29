@@ -23,16 +23,18 @@ def crear_tablas():
     """
     Crea las tablas del sistema si todavia no existen.
     Se ejecuta una sola vez al iniciar el programa.
+
+    El DNI es la clave primaria de pacientes, y el legajo la de medicos:
+    son identificadores reales, no numeros generados por el sistema.
     """
     conexion = obtener_conexion()
     cursor = conexion.cursor()
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pacientes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dni TEXT PRIMARY KEY,
             nombre TEXT NOT NULL,
             apellido TEXT NOT NULL,
-            dni TEXT NOT NULL UNIQUE,
             telefono TEXT NOT NULL,
             telefono_fijo TEXT,
             email TEXT NOT NULL
@@ -41,24 +43,27 @@ def crear_tablas():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS medicos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            legajo TEXT PRIMARY KEY,
+            dni TEXT NOT NULL UNIQUE,
             nombre TEXT NOT NULL,
             apellido TEXT NOT NULL,
-            especialidad TEXT NOT NULL
+            especialidad TEXT NOT NULL,
+            telefono TEXT NOT NULL,
+            email TEXT NOT NULL
         )
     """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS turnos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            paciente_id INTEGER NOT NULL,
-            medico_id INTEGER NOT NULL,
+            paciente_dni TEXT NOT NULL,
+            medico_legajo TEXT NOT NULL,
             fecha TEXT NOT NULL,
             hora TEXT NOT NULL,
             estado TEXT NOT NULL DEFAULT 'pendiente',
             motivo TEXT NOT NULL,
-            FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
-            FOREIGN KEY (medico_id) REFERENCES medicos(id)
+            FOREIGN KEY (paciente_dni) REFERENCES pacientes(dni),
+            FOREIGN KEY (medico_legajo) REFERENCES medicos(legajo)
         )
     """)
 
