@@ -24,7 +24,7 @@ def menu_pacientes():
         print("1. Dar de alta un paciente")
         print("2. Listar pacientes")
         print("3. Actualizar un paciente")
-        print("4. Eliminar un paciente")
+        print("4. Desactivar un paciente")
         print("5. Volver al menu principal")
         opcion = input("Elegi una opcion: ").strip()
 
@@ -46,7 +46,7 @@ def menu_pacientes():
         elif opcion == "2":
             pacientes = Paciente.listar_todos()
             if not pacientes:
-                print("No hay pacientes registrados todavia.")
+                print("No hay pacientes activos registrados todavia.")
             for p in pacientes:
                 print(p)
             pausar()
@@ -70,9 +70,9 @@ def menu_pacientes():
             pausar()
 
         elif opcion == "4":
-            dni = input("DNI del paciente a eliminar: ").strip()
+            dni = input("DNI del paciente a desactivar: ").strip()
             Paciente.eliminar(dni)
-            print("Paciente eliminado (si existia).")
+            print("Paciente desactivado (el historial de turnos se conserva).")
             pausar()
 
         elif opcion == "5":
@@ -89,7 +89,7 @@ def menu_medicos():
         print("1. Dar de alta un medico")
         print("2. Listar medicos")
         print("3. Buscar medicos por especialidad")
-        print("4. Eliminar un medico")
+        print("4. Desactivar un medico")
         print("5. Volver al menu principal")
         opcion = input("Elegi una opcion: ").strip()
 
@@ -112,7 +112,7 @@ def menu_medicos():
         elif opcion == "2":
             medicos = Medico.listar_todos()
             if not medicos:
-                print("No hay medicos registrados todavia.")
+                print("No hay medicos activos registrados todavia.")
             for m in medicos:
                 print(m)
             pausar()
@@ -127,9 +127,9 @@ def menu_medicos():
             pausar()
 
         elif opcion == "4":
-            legajo = input("Legajo del medico a eliminar: ").strip()
+            legajo = input("Legajo del medico a desactivar: ").strip()
             Medico.eliminar(legajo)
-            print("Medico eliminado (si existia).")
+            print("Medico desactivado (el historial de turnos se conserva).")
             pausar()
 
         elif opcion == "5":
@@ -147,9 +147,11 @@ def menu_turnos():
         print("2. Listar turnos por fecha")
         print("3. Listar turnos por medico")
         print("4. Listar turnos por paciente")
-        print("5. Cancelar un turno")
-        print("6. Marcar un turno como atendido")
-        print("7. Volver al menu principal")
+        print("5. Ver historial de un paciente (con resumen)")
+        print("6. Cancelar un turno")
+        print("7. Marcar un turno como atendido")
+        print("8. Marcar un turno como ausente")
+        print("9. Volver al menu principal")
         opcion = input("Elegi una opcion: ").strip()
 
         if opcion == "1":
@@ -199,6 +201,23 @@ def menu_turnos():
             pausar()
 
         elif opcion == "5":
+            paciente_dni = input("DNI del paciente: ").strip()
+            resumen, turnos = Turno.resumen_por_paciente(paciente_dni)
+            print(f"\nHistorial del paciente DNI {paciente_dni}")
+            print(f"Total de turnos: {resumen['total']}")
+            print(f"  Atendidos:  {resumen['atendido']}")
+            print(f"  Pendientes: {resumen['pendiente']}")
+            print(f"  Confirmados: {resumen['confirmado']}")
+            print(f"  Cancelados: {resumen['cancelado']}")
+            print(f"  Ausentes:   {resumen['ausente']}")
+            print("\nDetalle:")
+            if not turnos:
+                print("(sin turnos registrados)")
+            for t in turnos:
+                print(t)
+            pausar()
+
+        elif opcion == "6":
             id_turno = input("ID del turno a cancelar: ").strip()
             turno = Turno.buscar_por_id(id_turno)
             if turno is None:
@@ -208,7 +227,7 @@ def menu_turnos():
                 print("Turno cancelado.")
             pausar()
 
-        elif opcion == "6":
+        elif opcion == "7":
             id_turno = input("ID del turno a marcar como atendido: ").strip()
             turno = Turno.buscar_por_id(id_turno)
             if turno is None:
@@ -218,7 +237,17 @@ def menu_turnos():
                 print("Turno marcado como atendido.")
             pausar()
 
-        elif opcion == "7":
+        elif opcion == "8":
+            id_turno = input("ID del turno a marcar como ausente: ").strip()
+            turno = Turno.buscar_por_id(id_turno)
+            if turno is None:
+                print("No existe un turno con ese ID.")
+            else:
+                turno.cambiar_estado("ausente")
+                print("Turno marcado como ausente.")
+            pausar()
+
+        elif opcion == "9":
             break
         else:
             print("Opcion invalida.")

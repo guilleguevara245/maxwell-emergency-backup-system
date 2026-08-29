@@ -27,7 +27,7 @@ def validar_legajo(legajo):
 
 def validar_dni(dni):
     """
-    Un DNI válido tiene entre 7 y 8 digitos numericos (formato argentino).
+    Un DNI valido tiene entre 7 y 8 digitos numericos (formato argentino).
     """
     if not dni or not dni.isdigit():
         raise ValueError("El DNI debe contener solo numeros.")

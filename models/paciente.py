@@ -4,6 +4,8 @@ Maxwell Medic System - by Guillermo Guevara
 Modelo de Paciente: representa la entidad y sus operaciones
 contra la base de datos (crear, leer, actualizar, borrar).
 El DNI es la clave primaria: es un dato real, no un numero generado.
+Usa borrado logico: "eliminar" marca al paciente como inactivo,
+no borra el registro (para conservar el historial de turnos).
 """
 
 from database import obtener_conexion
@@ -11,16 +13,20 @@ from utils.validaciones import validar_dni, validar_email, validar_telefono, val
 
 
 class Paciente:
-    def __init__(self, nombre, apellido, dni, telefono, email, telefono_fijo=None):
+    def __init__(self, nombre, apellido, dni, telefono, email, telefono_fijo=None,
+                 activo=True, fecha_registro=None):
         self.dni = dni
         self.nombre = nombre
         self.apellido = apellido
         self.telefono = telefono
         self.telefono_fijo = telefono_fijo
         self.email = email
+        self.activo = bool(activo)
+        self.fecha_registro = fecha_registro
 
     def __str__(self):
-        return f"[DNI {self.dni}] {self.nombre} {self.apellido}"
+        etiqueta = "" if self.activo else " (INACTIVO)"
+        return f"[DNI {self.dni}] {self.nombre} {self.apellido}{etiqueta}"
 
     def guardar(self):
         """
@@ -47,35 +53,37 @@ class Paciente:
             conexion.close()
 
     @staticmethod
-    def listar_todos():
+    def listar_todos(incluir_inactivos=False):
         """
-        Devuelve una lista con todos los pacientes registrados.
+        Devuelve una lista con los pacientes registrados.
+        Por defecto solo devuelve los activos.
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        cursor.execute(
-            "SELECT dni, nombre, apellido, telefono, telefono_fijo, email FROM pacientes"
-        )
+        consulta = ("SELECT dni, nombre, apellido, telefono, telefono_fijo, "
+                    "email, activo, fecha_registro FROM pacientes")
+        if not incluir_inactivos:
+            consulta += " WHERE activo = 1"
+        cursor.execute(consulta)
         filas = cursor.fetchall()
         conexion.close()
 
-        pacientes = []
-        for fila in filas:
-            pacientes.append(Paciente(
-                dni=fila[0], nombre=fila[1], apellido=fila[2],
-                telefono=fila[3], telefono_fijo=fila[4], email=fila[5]
-            ))
-        return pacientes
+        return [Paciente(dni=f[0], nombre=f[1], apellido=f[2], telefono=f[3],
+                          telefono_fijo=f[4], email=f[5], activo=f[6], fecha_registro=f[7])
+                for f in filas]
 
     @staticmethod
     def buscar_por_dni(dni):
         """
-        Busca un paciente por su DNI. Devuelve None si no existe.
+        Busca un paciente por su DNI (activo o inactivo). Devuelve None si no existe.
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(
-            "SELECT dni, nombre, apellido, telefono, telefono_fijo, email FROM pacientes WHERE dni = ?",
+            """
+            SELECT dni, nombre, apellido, telefono, telefono_fijo, email, activo, fecha_registro
+            FROM pacientes WHERE dni = ?
+            """,
             (dni,),
         )
         fila = cursor.fetchone()
@@ -83,8 +91,8 @@ class Paciente:
 
         if fila is None:
             return None
-        return Paciente(dni=fila[0], nombre=fila[1], apellido=fila[2],
-                         telefono=fila[3], telefono_fijo=fila[4], email=fila[5])
+        return Paciente(dni=fila[0], nombre=fila[1], apellido=fila[2], telefono=fila[3],
+                         telefono_fijo=fila[4], email=fila[5], activo=fila[6], fecha_registro=fila[7])
 
     def actualizar(self):
         """
@@ -114,10 +122,22 @@ class Paciente:
     @staticmethod
     def eliminar(dni):
         """
-        Elimina un paciente de la base de datos segun su DNI.
+        Borrado logico: marca al paciente como inactivo en vez de
+        borrar el registro, para conservar el historial de turnos.
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        cursor.execute("DELETE FROM pacientes WHERE dni = ?", (dni,))
+        cursor.execute("UPDATE pacientes SET activo = 0 WHERE dni = ?", (dni,))
+        conexion.commit()
+        conexion.close()
+
+    @staticmethod
+    def reactivar(dni):
+        """
+        Revierte un borrado logico: vuelve a marcar al paciente como activo.
+        """
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("UPDATE pacientes SET activo = 1 WHERE dni = ?", (dni,))
         conexion.commit()
         conexion.close()

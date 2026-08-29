@@ -11,10 +11,12 @@ from utils.validaciones import validar_fecha, validar_hora, fecha_iso_a_visual
 
 
 class Turno:
-    ESTADOS_VALIDOS = ("pendiente", "confirmado", "cancelado", "atendido")
+    # "ausente" es distinto de "cancelado": cancelado es cuando se avisa
+    # con anticipacion, ausente es cuando el paciente no se presenta.
+    ESTADOS_VALIDOS = ("pendiente", "confirmado", "cancelado", "atendido", "ausente")
 
     def __init__(self, paciente_dni, medico_legajo, fecha, hora,
-                 motivo, estado="pendiente", id=None):
+                 motivo, estado="pendiente", id=None, fecha_registro=None):
         self.id = id
         self.paciente_dni = paciente_dni
         self.medico_legajo = medico_legajo
@@ -22,6 +24,7 @@ class Turno:
         self.hora = hora      # formato esperado: HH:MM
         self.estado = estado
         self.motivo = motivo
+        self.fecha_registro = fecha_registro
 
     def __str__(self):
         return (f"[{self.id}] {fecha_iso_a_visual(self.fecha)} {self.hora} - "
@@ -80,20 +83,24 @@ class Turno:
         return self.id
 
     @staticmethod
+    def _filas_a_turnos(filas):
+        return [Turno(id=f[0], paciente_dni=f[1], medico_legajo=f[2], fecha=f[3],
+                       hora=f[4], estado=f[5], motivo=f[6], fecha_registro=f[7]) for f in filas]
+
+    @staticmethod
     def listar_por_fecha(fecha):
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(
             """
-            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo
+            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo, fecha_registro
             FROM turnos WHERE fecha = ? ORDER BY hora
             """,
             (fecha,),
         )
         filas = cursor.fetchall()
         conexion.close()
-        return [Turno(id=f[0], paciente_dni=f[1], medico_legajo=f[2], fecha=f[3],
-                       hora=f[4], estado=f[5], motivo=f[6]) for f in filas]
+        return Turno._filas_a_turnos(filas)
 
     @staticmethod
     def listar_por_medico(medico_legajo):
@@ -101,15 +108,14 @@ class Turno:
         cursor = conexion.cursor()
         cursor.execute(
             """
-            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo
+            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo, fecha_registro
             FROM turnos WHERE medico_legajo = ? ORDER BY fecha, hora
             """,
             (medico_legajo,),
         )
         filas = cursor.fetchall()
         conexion.close()
-        return [Turno(id=f[0], paciente_dni=f[1], medico_legajo=f[2], fecha=f[3],
-                       hora=f[4], estado=f[5], motivo=f[6]) for f in filas]
+        return Turno._filas_a_turnos(filas)
 
     @staticmethod
     def listar_por_paciente(paciente_dni):
@@ -117,15 +123,14 @@ class Turno:
         cursor = conexion.cursor()
         cursor.execute(
             """
-            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo
+            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo, fecha_registro
             FROM turnos WHERE paciente_dni = ? ORDER BY fecha, hora
             """,
             (paciente_dni,),
         )
         filas = cursor.fetchall()
         conexion.close()
-        return [Turno(id=f[0], paciente_dni=f[1], medico_legajo=f[2], fecha=f[3],
-                       hora=f[4], estado=f[5], motivo=f[6]) for f in filas]
+        return Turno._filas_a_turnos(filas)
 
     @staticmethod
     def buscar_por_id(id_turno):
@@ -133,7 +138,7 @@ class Turno:
         cursor = conexion.cursor()
         cursor.execute(
             """
-            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo
+            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo, fecha_registro
             FROM turnos WHERE id = ?
             """,
             (id_turno,),
@@ -142,12 +147,25 @@ class Turno:
         conexion.close()
         if fila is None:
             return None
-        return Turno(id=fila[0], paciente_dni=fila[1], medico_legajo=fila[2],
-                     fecha=fila[3], hora=fila[4], estado=fila[5], motivo=fila[6])
+        return Turno._filas_a_turnos([fila])[0]
+
+    @staticmethod
+    def resumen_por_paciente(paciente_dni):
+        """
+        Devuelve un resumen del historial de turnos de un paciente:
+        cantidad total y cantidad por cada estado. Util para tener
+        una vista rapida de asistencia (atendidos, cancelados, ausentes).
+        """
+        turnos = Turno.listar_por_paciente(paciente_dni)
+        resumen = {estado: 0 for estado in Turno.ESTADOS_VALIDOS}
+        for turno in turnos:
+            resumen[turno.estado] = resumen.get(turno.estado, 0) + 1
+        resumen["total"] = len(turnos)
+        return resumen, turnos
 
     def cambiar_estado(self, nuevo_estado):
         """
-        Cambia el estado del turno (ej: cancelar, marcar como atendido).
+        Cambia el estado del turno (ej: cancelar, marcar como atendido o ausente).
         """
         if nuevo_estado not in Turno.ESTADOS_VALIDOS:
             raise ValueError(f"Estado invalido: {nuevo_estado}")
