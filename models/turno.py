@@ -11,8 +11,8 @@ from database import obtener_conexion
 class Turno:
     ESTADOS_VALIDOS = ("pendiente", "confirmado", "cancelado", "atendido")
 
-    def __init__(self, paciente_id, medico_id, fecha, hora,
-                 estado="pendiente", motivo=None, id=None):
+    def __init__(self, paciente_id, medico_id, fecha, hora, motivo,
+                 estado="pendiente", id=None):
         self.id = id
         self.paciente_id = paciente_id
         self.medico_id = medico_id
@@ -23,7 +23,7 @@ class Turno:
 
     def __str__(self):
         return (f"[{self.id}] {self.fecha} {self.hora} — "
-                f"Paciente {self.paciente_id} / Médico {self.medico_id} — {self.estado}")
+                f"Paciente {self.paciente_id} / Medico {self.medico_id} — {self.estado}")
 
     @staticmethod
     def existe_solapamiento(medico_id, fecha, hora):
@@ -50,6 +50,9 @@ class Turno:
         el medico este disponible en esa fecha y hora.
         Lanza un ValueError si ya existe un turno solapado.
         """
+        if not self.motivo or not self.motivo.strip():
+            raise ValueError("El motivo de consulta es obligatorio.")
+
         if Turno.existe_solapamiento(self.medico_id, self.fecha, self.hora):
             raise ValueError(
                 f"El medico {self.medico_id} ya tiene un turno el {self.fecha} a las {self.hora}."

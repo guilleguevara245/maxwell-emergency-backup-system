@@ -1,7 +1,7 @@
 """
 Maxwell Medic System — by Guillermo Guevara
 
-Módulo de conexión y creación de la base de datos SQLite.
+Modulo de conexion y creacion de la base de datos SQLite.
 """
 
 import sqlite3
@@ -11,8 +11,8 @@ NOMBRE_BASE_DATOS = "maxwell_medic.db"
 
 def obtener_conexion():
     """
-    Abre y devuelve una conexión a la base de datos SQLite.
-    Si el archivo .db no existe, SQLite lo crea automáticamente.
+    Abre y devuelve una conexion a la base de datos SQLite.
+    Si el archivo .db no existe, SQLite lo crea automaticamente.
     """
     conexion = sqlite3.connect(NOMBRE_BASE_DATOS)
     conexion.execute("PRAGMA foreign_keys = ON")  # activa las relaciones entre tablas
@@ -21,7 +21,7 @@ def obtener_conexion():
 
 def crear_tablas():
     """
-    Crea las tablas del sistema si todavía no existen.
+    Crea las tablas del sistema si todavia no existen.
     Se ejecuta una sola vez al iniciar el programa.
     """
     conexion = obtener_conexion()
@@ -33,8 +33,9 @@ def crear_tablas():
             nombre TEXT NOT NULL,
             apellido TEXT NOT NULL,
             dni TEXT NOT NULL UNIQUE,
-            telefono TEXT,
-            email TEXT
+            telefono TEXT NOT NULL,
+            telefono_fijo TEXT,
+            email TEXT NOT NULL
         )
     """)
 
@@ -55,7 +56,7 @@ def crear_tablas():
             fecha TEXT NOT NULL,
             hora TEXT NOT NULL,
             estado TEXT NOT NULL DEFAULT 'pendiente',
-            motivo TEXT,
+            motivo TEXT NOT NULL,
             FOREIGN KEY (paciente_id) REFERENCES pacientes(id),
             FOREIGN KEY (medico_id) REFERENCES medicos(id)
         )
