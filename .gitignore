@@ -1,6 +1,9 @@
 # Base de datos (se genera localmente, no se sube)
 *.db
 
+# Exportaciones CSV (datos generados, no se suben)
+exportado/
+
 # Archivos de Python
 __pycache__/
 *.pyc

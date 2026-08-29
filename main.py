@@ -10,6 +10,7 @@ from models.paciente import Paciente
 from models.medico import Medico
 from models.turno import Turno
 from utils.validaciones import fecha_visual_a_iso
+from utils.exportar import exportar_todo_csv
 
 
 def pausar():
@@ -262,7 +263,8 @@ def menu_principal():
         print("1. Gestion de Pacientes")
         print("2. Gestion de Medicos")
         print("3. Gestion de Turnos")
-        print("4. Salir")
+        print("4. Exportar datos a CSV (respaldo)")
+        print("5. Salir")
         opcion = input("Elegi una opcion: ").strip()
 
         if opcion == "1":
@@ -272,6 +274,12 @@ def menu_principal():
         elif opcion == "3":
             menu_turnos()
         elif opcion == "4":
+            rutas = exportar_todo_csv()
+            print("\nDatos exportados con exito:")
+            for ruta in rutas:
+                print(f"  - {ruta}")
+            pausar()
+        elif opcion == "5":
             print("Hasta luego!")
             break
         else:
