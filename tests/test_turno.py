@@ -1,7 +1,8 @@
 """
 Maxwell Medic System - by Guillermo Guevara
 
-Tests automaticos del modelo Turno.
+Tests automaticos del modelo Turno (solicitudes de turno, sin
+fecha ni hora: eso lo asigna despues el sistema principal).
 """
 
 import os
@@ -31,102 +32,102 @@ class TestTurno(unittest.TestCase):
         if os.path.exists(database.NOMBRE_BASE_DATOS):
             os.remove(database.NOMBRE_BASE_DATOS)
 
-    def _crear_turno_valido(self, fecha="2026-09-01", hora="10:00"):
-        return Turno("12345678", "MED001", fecha, hora, motivo="Control")
+    def _crear_solicitud_valida(self, especialidad="Pediatria", medico_legajo=None):
+        return Turno("12345678", especialidad, "Control", medico_legajo=medico_legajo)
 
-    def test_guardar_turno_valido(self):
-        turno = self._crear_turno_valido()
+    def test_guardar_solicitud_valida_sin_medico_especifico(self):
+        turno = self._crear_solicitud_valida()
         turno.guardar()
         self.assertIsNotNone(turno.id)
         self.assertEqual(turno.estado, "pendiente")
+        self.assertIsNone(turno.medico_legajo)
+
+    def test_guardar_solicitud_con_medico_especifico(self):
+        turno = self._crear_solicitud_valida(medico_legajo="MED001")
+        turno.guardar()
+        self.assertEqual(turno.medico_legajo, "MED001")
+
+    def test_guardar_solicitud_con_observaciones(self):
+        turno = Turno("12345678", "Pediatria", "Control", observaciones="Alergia a la penicilina")
+        turno.guardar()
+        encontrada = Turno.buscar_por_id(turno.id)
+        self.assertEqual(encontrada.observaciones, "Alergia a la penicilina")
+
+    def test_observaciones_es_opcional(self):
+        turno = self._crear_solicitud_valida()
+        turno.guardar()
+        self.assertIsNone(turno.observaciones)
 
     def test_rechaza_motivo_vacio(self):
-        turno = Turno("12345678", "MED001", "2026-09-01", "10:00", motivo="")
+        turno = Turno("12345678", "Pediatria", "")
         with self.assertRaises(ValueError):
             turno.guardar()
 
-    def test_rechaza_fecha_con_formato_invalido(self):
-        turno = Turno("12345678", "MED001", "01-09-2026", "10:00", motivo="Control")
+    def test_rechaza_especialidad_vacia(self):
+        turno = Turno("12345678", "", "Control")
         with self.assertRaises(ValueError):
             turno.guardar()
 
-    def test_rechaza_fecha_inexistente(self):
-        turno = Turno("12345678", "MED001", "2026-02-30", "10:00", motivo="Control")
+    def test_rechaza_solicitud_con_paciente_inexistente(self):
+        turno = Turno("99999999", "Pediatria", "Control")
         with self.assertRaises(ValueError):
             turno.guardar()
 
-    def test_rechaza_hora_con_formato_invalido(self):
-        turno = Turno("12345678", "MED001", "2026-09-01", "25:99", motivo="Control")
+    def test_rechaza_solicitud_con_paciente_inactivo(self):
+        Paciente.eliminar("12345678")
+        turno = self._crear_solicitud_valida()
         with self.assertRaises(ValueError):
             turno.guardar()
 
-    def test_detecta_solapamiento_de_horario(self):
-        self._crear_turno_valido().guardar()
-        turno_solapado = self._crear_turno_valido()
+    def test_rechaza_solicitud_con_medico_inexistente(self):
+        turno = self._crear_solicitud_valida(medico_legajo="NOEXISTE")
         with self.assertRaises(ValueError):
-            turno_solapado.guardar()
+            turno.guardar()
 
-    def test_no_hay_solapamiento_en_horarios_distintos(self):
-        self._crear_turno_valido(hora="10:00").guardar()
-        turno_otro_horario = self._crear_turno_valido(hora="11:00")
-        turno_otro_horario.guardar()
-        self.assertIsNotNone(turno_otro_horario.id)
+    def test_rechaza_solicitud_con_medico_inactivo(self):
+        Medico.eliminar("MED001")
+        turno = self._crear_solicitud_valida(medico_legajo="MED001")
+        with self.assertRaises(ValueError):
+            turno.guardar()
 
-    def test_cancelar_libera_el_horario(self):
-        turno = self._crear_turno_valido()
+    def test_permite_solicitud_sin_medico_aunque_no_haya_medicos_de_esa_especialidad(self):
+        turno = self._crear_solicitud_valida(especialidad="Traumatologia")
         turno.guardar()
-        turno.cambiar_estado("cancelado")
-
-        turno_nuevo = self._crear_turno_valido()
-        turno_nuevo.guardar()  # no debe explotar: el horario cancelado queda libre
-        self.assertIsNotNone(turno_nuevo.id)
-
-    def test_cambiar_estado_a_ausente(self):
-        turno = self._crear_turno_valido()
-        turno.guardar()
-        turno.cambiar_estado("ausente")
-        self.assertEqual(turno.estado, "ausente")
+        self.assertIsNotNone(turno.id)
 
     def test_cambiar_a_estado_invalido_lanza_error(self):
-        turno = self._crear_turno_valido()
+        turno = self._crear_solicitud_valida()
         turno.guardar()
         with self.assertRaises(ValueError):
             turno.cambiar_estado("no_existe")
 
+    def test_ausente_ya_no_es_un_estado_valido(self):
+        turno = self._crear_solicitud_valida()
+        turno.guardar()
+        with self.assertRaises(ValueError):
+            turno.cambiar_estado("ausente")
+
     def test_resumen_por_paciente_cuenta_bien_los_estados(self):
-        t1 = self._crear_turno_valido(fecha="2026-09-01"); t1.guardar()
-        t2 = self._crear_turno_valido(fecha="2026-09-02"); t2.guardar()
-        t3 = self._crear_turno_valido(fecha="2026-09-03"); t3.guardar()
+        t1 = self._crear_solicitud_valida(); t1.guardar()
+        t2 = self._crear_solicitud_valida(); t2.guardar()
+        t3 = self._crear_solicitud_valida(); t3.guardar()
         t1.cambiar_estado("atendido")
-        t2.cambiar_estado("ausente")
+        t2.cambiar_estado("cancelado")
         # t3 queda pendiente
 
         resumen, turnos = Turno.resumen_por_paciente("12345678")
 
         self.assertEqual(resumen["total"], 3)
         self.assertEqual(resumen["atendido"], 1)
-        self.assertEqual(resumen["ausente"], 1)
+        self.assertEqual(resumen["cancelado"], 1)
         self.assertEqual(resumen["pendiente"], 1)
         self.assertEqual(len(turnos), 3)
-
-    def test_listar_por_fecha_devuelve_solo_esa_fecha(self):
-        self._crear_turno_valido(fecha="2026-09-01", hora="10:00").guardar()
-        self._crear_turno_valido(fecha="2026-09-01", hora="11:00").guardar()
-        self._crear_turno_valido(fecha="2026-09-02", hora="10:00").guardar()
-
-        turnos = Turno.listar_por_fecha("2026-09-01")
-
-        self.assertEqual(len(turnos), 2)
-
-    def test_listar_por_fecha_sin_turnos_devuelve_lista_vacia(self):
-        turnos = Turno.listar_por_fecha("2026-12-25")
-        self.assertEqual(turnos, [])
 
     def test_listar_por_medico_devuelve_solo_los_de_ese_medico(self):
         Medico("MED002", "99887766", "Luis", "Diaz", "Cardiologia",
                "91122334455", "luis@test.com").guardar()
-        self._crear_turno_valido(hora="10:00").guardar()
-        Turno("12345678", "MED002", "2026-09-01", "11:00", motivo="Control").guardar()
+        self._crear_solicitud_valida(medico_legajo="MED001").guardar()
+        Turno("12345678", "Cardiologia", "Control", medico_legajo="MED002").guardar()
 
         turnos_med001 = Turno.listar_por_medico("MED001")
         turnos_med002 = Turno.listar_por_medico("MED002")
@@ -134,8 +135,16 @@ class TestTurno(unittest.TestCase):
         self.assertEqual(len(turnos_med001), 1)
         self.assertEqual(len(turnos_med002), 1)
 
-    def test_buscar_por_id_encuentra_el_turno_correcto(self):
-        turno = self._crear_turno_valido()
+    def test_listar_por_paciente_devuelve_todas_sus_solicitudes(self):
+        self._crear_solicitud_valida().guardar()
+        self._crear_solicitud_valida(especialidad="Cardiologia").guardar()
+
+        turnos = Turno.listar_por_paciente("12345678")
+
+        self.assertEqual(len(turnos), 2)
+
+    def test_buscar_por_id_encuentra_la_solicitud_correcta(self):
+        turno = self._crear_solicitud_valida()
         turno.guardar()
 
         encontrado = Turno.buscar_por_id(turno.id)
@@ -146,10 +155,55 @@ class TestTurno(unittest.TestCase):
     def test_buscar_por_id_devuelve_none_si_no_existe(self):
         self.assertIsNone(Turno.buscar_por_id(9999))
 
-    def test_str_incluye_fecha_en_formato_visual(self):
-        turno = self._crear_turno_valido(fecha="2026-09-01")
+    def test_str_muestra_sin_medico_especifico_cuando_corresponde(self):
+        turno = self._crear_solicitud_valida()
         turno.guardar()
-        self.assertIn("01/09/2026", str(turno))
+        self.assertIn("sin medico especifico", str(turno))
+
+    def test_str_muestra_legajo_cuando_hay_medico_especifico(self):
+        turno = self._crear_solicitud_valida(medico_legajo="MED001")
+        turno.guardar()
+        self.assertIn("MED001", str(turno))
+
+    def test_solicitud_nueva_no_esta_exportada_por_defecto(self):
+        turno = self._crear_solicitud_valida()
+        turno.guardar()
+        self.assertFalse(turno.exportado)
+
+    def test_contar_pendientes_de_exportar(self):
+        self._crear_solicitud_valida().guardar()
+        self._crear_solicitud_valida(especialidad="Cardiologia").guardar()
+        self.assertEqual(Turno.contar_pendientes_de_exportar(), 2)
+
+    def test_marcar_todos_como_exportados_pone_contador_en_cero(self):
+        self._crear_solicitud_valida().guardar()
+        self._crear_solicitud_valida(especialidad="Cardiologia").guardar()
+        Turno.marcar_todos_como_exportados()
+        self.assertEqual(Turno.contar_pendientes_de_exportar(), 0)
+
+    def test_listar_pendientes_de_exportar_devuelve_solo_los_no_exportados(self):
+        self._crear_solicitud_valida().guardar()
+        segunda = self._crear_solicitud_valida(especialidad="Cardiologia")
+        segunda.guardar()
+
+        Turno.marcar_todos_como_exportados()
+        tercera = self._crear_solicitud_valida(especialidad="Traumatologia")
+        tercera.guardar()
+
+        pendientes = Turno.listar_pendientes_de_exportar()
+        self.assertEqual(len(pendientes), 1)
+        self.assertEqual(pendientes[0].especialidad, "Traumatologia")
+
+    def test_listar_de_hoy_devuelve_las_solicitudes_recien_creadas(self):
+        self._crear_solicitud_valida().guardar()
+        self._crear_solicitud_valida(especialidad="Cardiologia").guardar()
+
+        de_hoy = Turno.listar_de_hoy()
+
+        self.assertEqual(len(de_hoy), 2)
+
+    def test_listar_de_hoy_vacio_si_no_hay_solicitudes(self):
+        self.assertEqual(Turno.listar_de_hoy(), [])
 
 
 if __name__ == "__main__":

@@ -24,13 +24,20 @@ def crear_tablas():
     Crea las tablas del sistema si todavia no existen.
 
     El DNI es la clave primaria de pacientes, y el legajo la de medicos:
-    son identificadores reales.
+    son identificadores reales, no numeros generados por el sistema.
 
     "activo" implementa borrado logico: en vez de eliminar un registro
     de verdad, se marca como inactivo, para conservar el historial.
 
     "fecha_registro" guarda cuando se creo cada registro, con fines
     de auditoria basica.
+
+    Los turnos NO llevan fecha ni hora: Maxwell es un sistema de
+    respaldo que registra la SOLICITUD de turno (paciente, especialidad,
+    medico especifico si se pidio, motivo y observaciones). La fecha y
+    hora se asignan despues, en el sistema principal. Por eso
+    "medico_legajo" es opcional: solo se completa si el paciente pidio
+    un medico en particular.
     """
     conexion = obtener_conexion()
     cursor = conexion.cursor()
@@ -66,14 +73,31 @@ def crear_tablas():
         CREATE TABLE IF NOT EXISTS turnos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             paciente_dni TEXT NOT NULL,
-            medico_legajo TEXT NOT NULL,
-            fecha TEXT NOT NULL,
-            hora TEXT NOT NULL,
-            estado TEXT NOT NULL DEFAULT 'pendiente',
+            especialidad TEXT NOT NULL,
+            medico_legajo TEXT,
             motivo TEXT NOT NULL,
+            observaciones TEXT,
+            estado TEXT NOT NULL DEFAULT 'pendiente',
+            exportado INTEGER NOT NULL DEFAULT 0,
             fecha_registro TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (paciente_dni) REFERENCES pacientes(dni),
             FOREIGN KEY (medico_legajo) REFERENCES medicos(legajo)
+        )
+    """)
+
+    # Registro libre de "codigo de turno del sistema principal" + DNI,
+    # para anotar que un paciente fue atendido y despues cargarlo
+    # manualmente en el sistema principal. No se relaciona con la
+    # tabla turnos: el codigo lo asigna el sistema principal, que
+    # Maxwell no conoce.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS confirmaciones_atencion (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo_turno TEXT NOT NULL,
+            paciente_dni TEXT NOT NULL,
+            exportado INTEGER NOT NULL DEFAULT 0,
+            fecha_registro TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (paciente_dni) REFERENCES pacientes(dni)
         )
     """)
 

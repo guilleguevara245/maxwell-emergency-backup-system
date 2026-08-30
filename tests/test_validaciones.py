@@ -14,16 +14,12 @@ from utils.validaciones import (
     validar_email,
     validar_telefono,
     validar_telefono_fijo,
-    validar_fecha,
-    validar_hora,
-    fecha_visual_a_iso,
-    fecha_iso_a_visual,
 )
 
 
 class TestValidarDni(unittest.TestCase):
     def test_dni_valido_no_lanza_error(self):
-        validar_dni("12345678")  # no debe lanzar excepcion
+        validar_dni("12345678")
 
     def test_dni_con_letras_lanza_error(self):
         with self.assertRaises(ValueError):
@@ -96,44 +92,6 @@ class TestValidarLegajo(unittest.TestCase):
     def test_legajo_con_simbolos_lanza_error(self):
         with self.assertRaises(ValueError):
             validar_legajo("MED-01")
-
-
-class TestValidarFechaYHora(unittest.TestCase):
-    def test_fecha_valida_no_lanza_error(self):
-        validar_fecha("2026-09-01")
-
-    def test_fecha_formato_incorrecto_lanza_error(self):
-        with self.assertRaises(ValueError):
-            validar_fecha("01-09-2026")
-
-    def test_fecha_inexistente_lanza_error(self):
-        with self.assertRaises(ValueError):
-            validar_fecha("2026-02-30")
-
-    def test_hora_valida_no_lanza_error(self):
-        validar_hora("10:00")
-
-    def test_hora_formato_incorrecto_lanza_error(self):
-        with self.assertRaises(ValueError):
-            validar_hora("25:99")
-
-
-class TestConversionFechas(unittest.TestCase):
-    def test_fecha_visual_a_iso_convierte_correctamente(self):
-        self.assertEqual(fecha_visual_a_iso("01/09/2026"), "2026-09-01")
-
-    def test_fecha_visual_a_iso_rechaza_formato_incorrecto(self):
-        with self.assertRaises(ValueError):
-            fecha_visual_a_iso("2026-09-01")
-
-    def test_fecha_iso_a_visual_convierte_correctamente(self):
-        self.assertEqual(fecha_iso_a_visual("2026-09-01"), "01/09/2026")
-
-    def test_conversion_ida_y_vuelta_da_el_mismo_resultado(self):
-        original = "25/12/2026"
-        iso = fecha_visual_a_iso(original)
-        de_vuelta = fecha_iso_a_visual(iso)
-        self.assertEqual(original, de_vuelta)
 
 
 if __name__ == "__main__":

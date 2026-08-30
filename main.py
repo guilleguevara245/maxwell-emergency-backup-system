@@ -2,14 +2,20 @@
 Maxwell Medic System - by Guillermo Guevara
 
 Punto de entrada del sistema. Menu de consola para gestionar
-pacientes, medicos y turnos.
+pacientes, medicos y solicitudes de turno.
+
+Maxwell es un sistema de respaldo: cuando el sistema principal del
+consultorio esta caido en horario laboral, permite registrar pacientes
+y solicitudes de turno (paciente, especialidad, medico especifico si
+se pidio, motivo y observaciones) para cargarlas despues en el sistema
+principal, que es quien asigna la fecha y hora real.
 """
 
 from database import crear_tablas
 from models.paciente import Paciente
 from models.medico import Medico
 from models.turno import Turno
-from utils.validaciones import fecha_visual_a_iso
+from models.confirmacion_atencion import ConfirmacionAtencion
 from utils.exportar import exportar_todo_csv
 
 
@@ -139,116 +145,119 @@ def menu_medicos():
             print("Opcion invalida.")
 
 
-# ---------- MENU DE TURNOS ----------
+# ---------- MENU DE TURNOS (solicitudes) ----------
 
 def menu_turnos():
     while True:
-        print("\n--- Gestion de Turnos ---")
-        print("1. Sacar un turno")
-        print("2. Listar turnos por fecha")
-        print("3. Listar turnos por medico")
-        print("4. Listar turnos por paciente")
-        print("5. Ver historial de un paciente (con resumen)")
-        print("6. Cancelar un turno")
-        print("7. Marcar un turno como atendido")
-        print("8. Marcar un turno como ausente")
-        print("9. Volver al menu principal")
+        print("\n--- Gestion de Solicitudes de Turno ---")
+        print("1. Registrar una solicitud de turno")
+        print("2. Listar solicitudes por medico")
+        print("3. Listar solicitudes por paciente")
+        print("4. Ver historial de un paciente (con resumen)")
+        print("5. Cancelar una solicitud")
+        print("6. Registrar turno atendido (codigo del sistema principal + DNI)")
+        print("7. Volver al menu principal")
         opcion = input("Elegi una opcion: ").strip()
 
         if opcion == "1":
             paciente_dni = input("DNI del paciente: ").strip()
-            medico_legajo = input("Legajo del medico: ").strip()
-            fecha_visual = input("Fecha (DD/MM/AAAA): ").strip()
-            hora = input("Hora (HH:MM): ").strip()
+            especialidad = input("Especialidad: ").strip()
+            quiere_medico_especifico = input("Pide un medico especifico? (si/no): ").strip().lower()
+
+            medico_legajo = None
+            if quiere_medico_especifico == "si":
+                medicos = Medico.listar_por_especialidad(especialidad)
+                if not medicos:
+                    print(f"No hay medicos activos de la especialidad '{especialidad}'. Se sigue sin medico especifico.")
+                else:
+                    print("\nMedicos disponibles de esa especialidad:")
+                    for m in medicos:
+                        print(f"  Legajo {m.legajo} - Dr/a. {m.nombre} {m.apellido}")
+                    medico_legajo = input("Legajo del medico elegido: ").strip()
+
             motivo = input("Motivo de consulta: ").strip()
+            observaciones = input("Observaciones (opcional): ").strip() or None
+
             try:
-                fecha_iso = fecha_visual_a_iso(fecha_visual)
-                turno = Turno(paciente_dni, medico_legajo, fecha_iso, hora, motivo=motivo)
+                turno = Turno(paciente_dni, especialidad, motivo,
+                              medico_legajo=medico_legajo, observaciones=observaciones)
                 turno.guardar()
-                print(f"Turno creado con exito: {turno}")
+                print(f"Solicitud registrada con exito: {turno}")
             except ValueError as error:
-                print(f"No se pudo crear el turno: {error}")
+                print(f"No se pudo registrar la solicitud: {error}")
             pausar()
 
         elif opcion == "2":
-            fecha_visual = input("Fecha a consultar (DD/MM/AAAA): ").strip()
-            try:
-                fecha_iso = fecha_visual_a_iso(fecha_visual)
-                turnos = Turno.listar_por_fecha(fecha_iso)
-                if not turnos:
-                    print("No hay turnos para esa fecha.")
-                for t in turnos:
-                    print(t)
-            except ValueError as error:
-                print(f"Fecha invalida: {error}")
-            pausar()
-
-        elif opcion == "3":
             medico_legajo = input("Legajo del medico: ").strip()
             turnos = Turno.listar_por_medico(medico_legajo)
             if not turnos:
-                print("No hay turnos para ese medico.")
+                print("No hay solicitudes para ese medico.")
+            for t in turnos:
+                print(t)
+            pausar()
+
+        elif opcion == "3":
+            paciente_dni = input("DNI del paciente: ").strip()
+            turnos = Turno.listar_por_paciente(paciente_dni)
+            if not turnos:
+                print("No hay solicitudes para ese paciente.")
             for t in turnos:
                 print(t)
             pausar()
 
         elif opcion == "4":
             paciente_dni = input("DNI del paciente: ").strip()
-            turnos = Turno.listar_por_paciente(paciente_dni)
+            resumen, turnos = Turno.resumen_por_paciente(paciente_dni)
+            print(f"\nHistorial del paciente DNI {paciente_dni}")
+            print(f"Total de solicitudes: {resumen['total']}")
+            print(f"  Atendidas:   {resumen['atendido']}")
+            print(f"  Pendientes:  {resumen['pendiente']}")
+            print(f"  Confirmadas: {resumen['confirmado']}")
+            print(f"  Canceladas:  {resumen['cancelado']}")
+            print("\nDetalle:")
             if not turnos:
-                print("No hay turnos para ese paciente.")
+                print("(sin solicitudes registradas)")
             for t in turnos:
                 print(t)
             pausar()
 
         elif opcion == "5":
-            paciente_dni = input("DNI del paciente: ").strip()
-            resumen, turnos = Turno.resumen_por_paciente(paciente_dni)
-            print(f"\nHistorial del paciente DNI {paciente_dni}")
-            print(f"Total de turnos: {resumen['total']}")
-            print(f"  Atendidos:  {resumen['atendido']}")
-            print(f"  Pendientes: {resumen['pendiente']}")
-            print(f"  Confirmados: {resumen['confirmado']}")
-            print(f"  Cancelados: {resumen['cancelado']}")
-            print(f"  Ausentes:   {resumen['ausente']}")
-            print("\nDetalle:")
-            if not turnos:
-                print("(sin turnos registrados)")
-            for t in turnos:
-                print(t)
+            solicitudes_hoy = Turno.listar_de_hoy()
+            if not solicitudes_hoy:
+                print("No hay solicitudes registradas hoy.")
+                pausar()
+                continue
+
+            print("\nSolicitudes de hoy:")
+            for indice, turno in enumerate(solicitudes_hoy, start=1):
+                paciente = Paciente.buscar_por_dni(turno.paciente_dni)
+                nombre_paciente = f"{paciente.nombre} {paciente.apellido}" if paciente else "(paciente no encontrado)"
+                print(f"  {indice}. DNI {turno.paciente_dni} - {nombre_paciente} - "
+                      f"{turno.especialidad} - {turno.motivo}")
+
+            seleccion = input("Numero de la solicitud a cancelar (o Enter para cancelar la operacion): ").strip()
+            if not seleccion:
+                print("Operacion cancelada.")
+            elif not seleccion.isdigit() or not (1 <= int(seleccion) <= len(solicitudes_hoy)):
+                print("Numero invalido.")
+            else:
+                turno_elegido = solicitudes_hoy[int(seleccion) - 1]
+                turno_elegido.cambiar_estado("cancelado")
+                print("Solicitud cancelada.")
             pausar()
 
         elif opcion == "6":
-            id_turno = input("ID del turno a cancelar: ").strip()
-            turno = Turno.buscar_por_id(id_turno)
-            if turno is None:
-                print("No existe un turno con ese ID.")
-            else:
-                turno.cambiar_estado("cancelado")
-                print("Turno cancelado.")
+            codigo_turno = input("Codigo de turno (segun el sistema principal): ").strip()
+            paciente_dni = input("DNI del paciente: ").strip()
+            try:
+                confirmacion = ConfirmacionAtencion(codigo_turno, paciente_dni)
+                confirmacion.guardar()
+                print(f"Confirmacion registrada: {confirmacion}")
+            except ValueError as error:
+                print(f"No se pudo registrar la confirmacion: {error}")
             pausar()
 
         elif opcion == "7":
-            id_turno = input("ID del turno a marcar como atendido: ").strip()
-            turno = Turno.buscar_por_id(id_turno)
-            if turno is None:
-                print("No existe un turno con ese ID.")
-            else:
-                turno.cambiar_estado("atendido")
-                print("Turno marcado como atendido.")
-            pausar()
-
-        elif opcion == "8":
-            id_turno = input("ID del turno a marcar como ausente: ").strip()
-            turno = Turno.buscar_por_id(id_turno)
-            if turno is None:
-                print("No existe un turno con ese ID.")
-            else:
-                turno.cambiar_estado("ausente")
-                print("Turno marcado como ausente.")
-            pausar()
-
-        elif opcion == "9":
             break
         else:
             print("Opcion invalida.")
@@ -259,10 +268,16 @@ def menu_turnos():
 def menu_principal():
     crear_tablas()
     while True:
+        pendientes_turnos = Turno.contar_pendientes_de_exportar()
+        pendientes_atenciones = ConfirmacionAtencion.contar_pendientes_de_exportar()
         print("\n===== Maxwell Medic System =====")
+        if pendientes_turnos > 0:
+            print(f"AVISO: tenes {pendientes_turnos} solicitud(es) de turno pendiente(s) por asignar al sistema principal.")
+        if pendientes_atenciones > 0:
+            print(f"AVISO: tenes {pendientes_atenciones} turno(s) atendido(s) pendiente(s) por cargar en el sistema principal.")
         print("1. Gestion de Pacientes")
         print("2. Gestion de Medicos")
-        print("3. Gestion de Turnos")
+        print("3. Gestion de Solicitudes de Turno")
         print("4. Exportar datos a CSV (respaldo)")
         print("5. Salir")
         opcion = input("Elegi una opcion: ").strip()
@@ -287,4 +302,7 @@ def menu_principal():
 
 
 if __name__ == "__main__":
-    menu_principal()
+    try:
+        menu_principal()
+    except KeyboardInterrupt:
+        print("\n\nPrograma interrumpido. Hasta luego!")

@@ -1,12 +1,11 @@
 """
-Maxwell Medic System — by Guillermo Guevara
+Maxwell Medic System - by Guillermo Guevara
 
 Funciones de validacion de formato, reutilizadas por los distintos
 modelos antes de guardar datos en la base.
 """
 
 import re
-from datetime import datetime
 
 PATRON_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -51,8 +50,8 @@ def validar_telefono(telefono):
     if not telefono:
         raise ValueError("El telefono es obligatorio.")
     solo_numeros = re.sub(r"[^0-9]", "", telefono)
-    if len(solo_numeros) < 11:
-        raise ValueError("El telefono (celular) debe tener al menos 11 digitos.")
+    if len(solo_numeros) < 10:
+        raise ValueError("El telefono (celular) debe tener al menos 10 digitos.")
 
 
 def validar_telefono_fijo(telefono_fijo):
@@ -65,48 +64,3 @@ def validar_telefono_fijo(telefono_fijo):
     solo_numeros = re.sub(r"[^0-9]", "", telefono_fijo)
     if len(solo_numeros) < 10:
         raise ValueError("El telefono fijo debe tener al menos 10 digitos.")
-
-
-def validar_fecha(fecha):
-    """
-    Valida que la fecha tenga formato AAAA-MM-DD y sea una fecha real
-    (por ejemplo, rechaza '2026-02-30'). Este es el formato interno
-    que se guarda en la base de datos.
-    """
-    try:
-        datetime.strptime(fecha, "%Y-%m-%d")
-    except (ValueError, TypeError):
-        raise ValueError(f"La fecha '{fecha}' debe tener el formato AAAA-MM-DD y ser valida.")
-
-
-def fecha_visual_a_iso(fecha_dm):
-    """
-    Convierte una fecha ingresada por el usuario en formato DD/MM/AAAA
-    al formato interno AAAA-MM-DD que se guarda en la base de datos.
-    Lanza ValueError si el formato o la fecha no son validos.
-    """
-    try:
-        return datetime.strptime(fecha_dm, "%d/%m/%Y").strftime("%Y-%m-%d")
-    except (ValueError, TypeError):
-        raise ValueError(f"La fecha '{fecha_dm}' debe tener el formato DD/MM/AAAA y ser valida.")
-
-
-def fecha_iso_a_visual(fecha_iso):
-    """
-    Convierte una fecha guardada en formato AAAA-MM-DD al formato
-    DD/MM/AAAA para mostrarla en pantalla.
-    """
-    try:
-        return datetime.strptime(fecha_iso, "%Y-%m-%d").strftime("%d/%m/%Y")
-    except (ValueError, TypeError):
-        return fecha_iso  # si algo viene mal formado, se muestra tal cual en vez de romper
-
-
-def validar_hora(hora):
-    """
-    Valida que la hora tenga formato HH:MM (24 horas).
-    """
-    try:
-        datetime.strptime(hora, "%H:%M")
-    except (ValueError, TypeError):
-        raise ValueError(f"La hora '{hora}' debe tener el formato HH:MM (24 horas).")

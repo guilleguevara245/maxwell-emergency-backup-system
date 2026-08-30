@@ -102,13 +102,15 @@ class Medico:
     def listar_por_especialidad(especialidad):
         """
         Devuelve los medicos activos que coinciden con una especialidad dada.
+        La comparacion no distingue mayusculas de minusculas (COLLATE NOCASE),
+        para que "Pediatria", "pediatria" y "PEDIATRIA" encuentren lo mismo.
         """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(
             """
             SELECT legajo, dni, nombre, apellido, especialidad, telefono, email, activo, fecha_registro
-            FROM medicos WHERE especialidad = ? AND activo = 1
+            FROM medicos WHERE especialidad = ? COLLATE NOCASE AND activo = 1
             """,
             (especialidad,),
         )

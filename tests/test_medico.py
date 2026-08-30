@@ -64,6 +64,13 @@ class TestMedico(unittest.TestCase):
         pediatras = Medico.listar_por_especialidad("Pediatria")
         self.assertEqual(len(pediatras), 1)
 
+    def test_listar_por_especialidad_no_distingue_mayusculas(self):
+        self._crear_medico_valido().guardar()  # especialidad "Pediatria"
+
+        self.assertEqual(len(Medico.listar_por_especialidad("pediatria")), 1)
+        self.assertEqual(len(Medico.listar_por_especialidad("PEDIATRIA")), 1)
+        self.assertEqual(len(Medico.listar_por_especialidad("PeDiAtRiA")), 1)
+
     def test_listar_todos_solo_muestra_activos_por_defecto(self):
         self._crear_medico_valido().guardar()
         Medico.eliminar("MED001")

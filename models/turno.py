@@ -1,80 +1,95 @@
 """
 Maxwell Medic System - by Guillermo Guevara
 
-Modelo de Turno: representa la entidad y sus operaciones,
-incluyendo la validacion de disponibilidad horaria del medico.
-Referencia a pacientes por DNI y a medicos por legajo.
+Modelo de Turno: representa una SOLICITUD de turno, no un turno ya
+agendado. Maxwell es un sistema de respaldo que se usa cuando el
+sistema principal del consultorio esta caido: registra los datos
+necesarios (paciente, especialidad, medico especifico si se pidio,
+motivo y observaciones) para que despues se asigne fecha y hora
+en el sistema principal. Por eso no tiene fecha ni hora.
+
+El campo "exportado" indica si la solicitud ya fue enviada al sistema
+principal (via la exportacion a CSV).
 """
 
 from database import obtener_conexion
-from utils.validaciones import validar_fecha, validar_hora, fecha_iso_a_visual
+
+
+def _validar_referencias(paciente_dni, medico_legajo):
+    """
+    Verifica que el paciente exista y este activo. Si se especifico
+    un medico en particular, tambien verifica que exista y este activo.
+    Se hace aca (en vez de dejar que salte el error de clave foranea
+    de SQLite) para dar un mensaje claro en vez de un traceback tecnico.
+    """
+    # Import diferido para evitar import circular con paciente.py/medico.py
+    from models.paciente import Paciente
+    from models.medico import Medico
+
+    paciente = Paciente.buscar_por_dni(paciente_dni)
+    if paciente is None:
+        raise ValueError(f"No existe un paciente con DNI {paciente_dni}.")
+    if not paciente.activo:
+        raise ValueError(f"El paciente con DNI {paciente_dni} esta inactivo.")
+
+    if medico_legajo:
+        medico = Medico.buscar_por_legajo(medico_legajo)
+        if medico is None:
+            raise ValueError(f"No existe un medico con legajo {medico_legajo}.")
+        if not medico.activo:
+            raise ValueError(f"El medico con legajo {medico_legajo} esta inactivo.")
 
 
 class Turno:
-    # "ausente" es distinto de "cancelado": cancelado es cuando se avisa
-    # con anticipacion, ausente es cuando el paciente no se presenta.
-    ESTADOS_VALIDOS = ("pendiente", "confirmado", "cancelado", "atendido", "ausente")
+    # "atendido" queda disponible para cuando el sistema principal
+    # informa que la consulta se realizo.
+    ESTADOS_VALIDOS = ("pendiente", "confirmado", "cancelado", "atendido")
 
-    def __init__(self, paciente_dni, medico_legajo, fecha, hora,
-                 motivo, estado="pendiente", id=None, fecha_registro=None):
+    CAMPOS_SELECT = ("id, paciente_dni, especialidad, medico_legajo, motivo, "
+                      "observaciones, estado, exportado, fecha_registro")
+
+    def __init__(self, paciente_dni, especialidad, motivo, medico_legajo=None,
+                 observaciones=None, estado="pendiente", id=None,
+                 exportado=False, fecha_registro=None):
         self.id = id
         self.paciente_dni = paciente_dni
+        self.especialidad = especialidad
         self.medico_legajo = medico_legajo
-        self.fecha = fecha    # formato interno: AAAA-MM-DD
-        self.hora = hora      # formato esperado: HH:MM
-        self.estado = estado
         self.motivo = motivo
+        self.observaciones = observaciones
+        self.estado = estado
+        self.exportado = bool(exportado)
         self.fecha_registro = fecha_registro
 
     def __str__(self):
-        return (f"[{self.id}] {fecha_iso_a_visual(self.fecha)} {self.hora} - "
-                f"Paciente DNI {self.paciente_dni} / Medico Legajo {self.medico_legajo} - {self.estado}")
-
-    @staticmethod
-    def existe_solapamiento(medico_legajo, fecha, hora):
-        """
-        Devuelve True si el medico ya tiene un turno (no cancelado)
-        agendado en esa misma fecha y hora.
-        """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            """
-            SELECT COUNT(*) FROM turnos
-            WHERE medico_legajo = ? AND fecha = ? AND hora = ? AND estado != 'cancelado'
-            """,
-            (medico_legajo, fecha, hora),
-        )
-        cantidad = cursor.fetchone()[0]
-        conexion.close()
-        return cantidad > 0
+        medico_texto = f"Legajo {self.medico_legajo}" if self.medico_legajo else "sin medico especifico"
+        return (f"[{self.id}] Paciente DNI {self.paciente_dni} - {self.especialidad} "
+                f"({medico_texto}) - {self.estado}")
 
     def guardar(self):
         """
-        Inserta el turno en la base de datos, validando antes que
-        el medico este disponible en esa fecha y hora.
+        Inserta la solicitud de turno en la base de datos.
+        Valida que el paciente exista y este activo, y si se pidio
+        un medico especifico, que tambien exista y este activo.
         """
+        if not self.especialidad or not self.especialidad.strip():
+            raise ValueError("La especialidad es obligatoria.")
         if not self.motivo or not self.motivo.strip():
             raise ValueError("El motivo de consulta es obligatorio.")
 
-        validar_fecha(self.fecha)
-        validar_hora(self.hora)
-
-        if Turno.existe_solapamiento(self.medico_legajo, self.fecha, self.hora):
-            raise ValueError(
-                f"El medico con legajo {self.medico_legajo} ya tiene un turno "
-                f"el {fecha_iso_a_visual(self.fecha)} a las {self.hora}."
-            )
+        _validar_referencias(self.paciente_dni, self.medico_legajo)
 
         conexion = obtener_conexion()
         try:
             cursor = conexion.cursor()
             cursor.execute(
                 """
-                INSERT INTO turnos (paciente_dni, medico_legajo, fecha, hora, estado, motivo)
+                INSERT INTO turnos (paciente_dni, especialidad, medico_legajo,
+                                     motivo, observaciones, estado)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (self.paciente_dni, self.medico_legajo, self.fecha, self.hora, self.estado, self.motivo),
+                (self.paciente_dni, self.especialidad, self.medico_legajo,
+                 self.motivo, self.observaciones, self.estado),
             )
             conexion.commit()
             self.id = cursor.lastrowid
@@ -84,19 +99,26 @@ class Turno:
 
     @staticmethod
     def _filas_a_turnos(filas):
-        return [Turno(id=f[0], paciente_dni=f[1], medico_legajo=f[2], fecha=f[3],
-                       hora=f[4], estado=f[5], motivo=f[6], fecha_registro=f[7]) for f in filas]
+        return [Turno(id=f[0], paciente_dni=f[1], especialidad=f[2], medico_legajo=f[3],
+                       motivo=f[4], observaciones=f[5], estado=f[6], exportado=f[7],
+                       fecha_registro=f[8]) for f in filas]
 
     @staticmethod
-    def listar_por_fecha(fecha):
+    def listar_de_hoy():
+        """
+        Devuelve las solicitudes registradas hoy (segun fecha_registro),
+        ordenadas por hora de registro. Se usa para el listado numerado
+        al cancelar una solicitud, sin necesidad de que el usuario
+        conozca el ID interno.
+        """
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(
+            f"""
+            SELECT {Turno.CAMPOS_SELECT} FROM turnos
+            WHERE date(fecha_registro) = date('now')
+            ORDER BY fecha_registro
             """
-            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo, fecha_registro
-            FROM turnos WHERE fecha = ? ORDER BY hora
-            """,
-            (fecha,),
         )
         filas = cursor.fetchall()
         conexion.close()
@@ -107,10 +129,7 @@ class Turno:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(
-            """
-            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo, fecha_registro
-            FROM turnos WHERE medico_legajo = ? ORDER BY fecha, hora
-            """,
+            f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE medico_legajo = ? ORDER BY fecha_registro",
             (medico_legajo,),
         )
         filas = cursor.fetchall()
@@ -122,10 +141,7 @@ class Turno:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(
-            """
-            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo, fecha_registro
-            FROM turnos WHERE paciente_dni = ? ORDER BY fecha, hora
-            """,
+            f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE paciente_dni = ? ORDER BY fecha_registro",
             (paciente_dni,),
         )
         filas = cursor.fetchall()
@@ -133,14 +149,48 @@ class Turno:
         return Turno._filas_a_turnos(filas)
 
     @staticmethod
+    def listar_pendientes_de_exportar():
+        """
+        Devuelve las solicitudes que todavia no fueron enviadas al
+        sistema principal (exportado = 0).
+        """
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute(f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE exportado = 0")
+        filas = cursor.fetchall()
+        conexion.close()
+        return Turno._filas_a_turnos(filas)
+
+    @staticmethod
+    def contar_pendientes_de_exportar():
+        """
+        Cuenta cuantas solicitudes todavia no se enviaron al sistema principal.
+        """
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("SELECT COUNT(*) FROM turnos WHERE exportado = 0")
+        cantidad = cursor.fetchone()[0]
+        conexion.close()
+        return cantidad
+
+    @staticmethod
+    def marcar_todos_como_exportados():
+        """
+        Marca todas las solicitudes pendientes como ya enviadas al
+        sistema principal. Se llama despues de generar la exportacion a CSV.
+        """
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("UPDATE turnos SET exportado = 1 WHERE exportado = 0")
+        conexion.commit()
+        conexion.close()
+
+    @staticmethod
     def buscar_por_id(id_turno):
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute(
-            """
-            SELECT id, paciente_dni, medico_legajo, fecha, hora, estado, motivo, fecha_registro
-            FROM turnos WHERE id = ?
-            """,
+            f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE id = ?",
             (id_turno,),
         )
         fila = cursor.fetchone()
@@ -152,9 +202,8 @@ class Turno:
     @staticmethod
     def resumen_por_paciente(paciente_dni):
         """
-        Devuelve un resumen del historial de turnos de un paciente:
-        cantidad total y cantidad por cada estado. Util para tener
-        una vista rapida de asistencia (atendidos, cancelados, ausentes).
+        Devuelve un resumen de las solicitudes de turno de un paciente:
+        cantidad total y cantidad por cada estado.
         """
         turnos = Turno.listar_por_paciente(paciente_dni)
         resumen = {estado: 0 for estado in Turno.ESTADOS_VALIDOS}
@@ -165,7 +214,9 @@ class Turno:
 
     def cambiar_estado(self, nuevo_estado):
         """
-        Cambia el estado del turno (ej: cancelar, marcar como atendido o ausente).
+        Cambia el estado de la solicitud (ej: cancelar antes de enviarla,
+        o marcar atendida cuando el sistema principal informa que la
+        consulta se realizo).
         """
         if nuevo_estado not in Turno.ESTADOS_VALIDOS:
             raise ValueError(f"Estado invalido: {nuevo_estado}")
