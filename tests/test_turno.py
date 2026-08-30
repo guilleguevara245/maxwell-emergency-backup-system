@@ -205,6 +205,19 @@ class TestTurno(unittest.TestCase):
     def test_listar_de_hoy_vacio_si_no_hay_solicitudes(self):
         self.assertEqual(Turno.listar_de_hoy(), [])
 
+    def test_eliminar_borra_la_solicitud_de_verdad(self):
+        turno = self._crear_solicitud_valida()
+        turno.guardar()
+        Turno.eliminar(turno.id)
+        self.assertIsNone(Turno.buscar_por_id(turno.id))
+
+    def test_eliminar_saca_la_solicitud_del_contador_de_pendientes(self):
+        turno = self._crear_solicitud_valida()
+        turno.guardar()
+        self.assertEqual(Turno.contar_pendientes_de_exportar(), 1)
+        Turno.eliminar(turno.id)
+        self.assertEqual(Turno.contar_pendientes_de_exportar(), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

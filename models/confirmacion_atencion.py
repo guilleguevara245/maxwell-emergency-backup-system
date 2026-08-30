@@ -13,6 +13,7 @@ disponible.
 """
 
 from database import obtener_conexion
+from utils.validaciones import validar_dni
 
 
 class ConfirmacionAtencion:
@@ -32,18 +33,15 @@ class ConfirmacionAtencion:
         """
         Guarda la confirmacion. El codigo de turno es texto libre
         (no tiene formato fijo, lo asigna el sistema principal).
-        Valida que el paciente exista y este activo.
+        El DNI del paciente solo se valida en FORMATO (que sea un DNI
+        valido), no se exige que el paciente ya este registrado en
+        Maxwell: puede tratarse de un paciente que el sistema
+        principal ya conocia de antes.
         """
         if not self.codigo_turno or not self.codigo_turno.strip():
             raise ValueError("El codigo de turno es obligatorio.")
 
-        # Import diferido para evitar import circular con paciente.py
-        from models.paciente import Paciente
-        paciente = Paciente.buscar_por_dni(self.paciente_dni)
-        if paciente is None:
-            raise ValueError(f"No existe un paciente con DNI {self.paciente_dni}.")
-        if not paciente.activo:
-            raise ValueError(f"El paciente con DNI {self.paciente_dni} esta inactivo.")
+        validar_dni(self.paciente_dni)
 
         conexion = obtener_conexion()
         try:

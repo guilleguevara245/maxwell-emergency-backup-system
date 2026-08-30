@@ -48,12 +48,12 @@ class TestValidarEmail(unittest.TestCase):
 
 
 class TestValidarTelefono(unittest.TestCase):
-    def test_celular_de_11_digitos_no_lanza_error(self):
-        validar_telefono("91122334455")
+    def test_celular_de_10_digitos_no_lanza_error(self):
+        validar_telefono("1122334455")
 
-    def test_celular_de_10_digitos_lanza_error(self):
+    def test_celular_de_9_digitos_lanza_error(self):
         with self.assertRaises(ValueError):
-            validar_telefono("1122334455")
+            validar_telefono("112233445")
 
     def test_telefono_vacio_lanza_error(self):
         with self.assertRaises(ValueError):

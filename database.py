@@ -88,16 +88,15 @@ def crear_tablas():
     # Registro libre de "codigo de turno del sistema principal" + DNI,
     # para anotar que un paciente fue atendido y despues cargarlo
     # manualmente en el sistema principal. No se relaciona con la
-    # tabla turnos: el codigo lo asigna el sistema principal, que
-    # Maxwell no conoce.
+    # tabla turnos ni exige que el paciente este en pacientes: puede
+    # tratarse de alguien que el sistema principal ya conocia de antes.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS confirmaciones_atencion (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             codigo_turno TEXT NOT NULL,
             paciente_dni TEXT NOT NULL,
             exportado INTEGER NOT NULL DEFAULT 0,
-            fecha_registro TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (paciente_dni) REFERENCES pacientes(dni)
+            fecha_registro TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     """)
 

@@ -16,7 +16,7 @@ from models.paciente import Paciente
 from models.medico import Medico
 from models.turno import Turno
 from models.confirmacion_atencion import ConfirmacionAtencion
-from utils.exportar import exportar_todo_csv
+from utils.exportar import exportar_todo_pdf
 
 
 def pausar():
@@ -242,8 +242,8 @@ def menu_turnos():
                 print("Numero invalido.")
             else:
                 turno_elegido = solicitudes_hoy[int(seleccion) - 1]
-                turno_elegido.cambiar_estado("cancelado")
-                print("Solicitud cancelada.")
+                Turno.eliminar(turno_elegido.id)
+                print("Solicitud cancelada y eliminada del sistema local.")
             pausar()
 
         elif opcion == "6":
@@ -278,7 +278,7 @@ def menu_principal():
         print("1. Gestion de Pacientes")
         print("2. Gestion de Medicos")
         print("3. Gestion de Solicitudes de Turno")
-        print("4. Exportar datos a CSV (respaldo)")
+        print("4. Exportar datos a PDF (respaldo)")
         print("5. Salir")
         opcion = input("Elegi una opcion: ").strip()
 
@@ -289,7 +289,7 @@ def menu_principal():
         elif opcion == "3":
             menu_turnos()
         elif opcion == "4":
-            rutas = exportar_todo_csv()
+            rutas = exportar_todo_pdf()
             print("\nDatos exportados con exito:")
             for ruta in rutas:
                 print(f"  - {ruta}")

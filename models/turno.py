@@ -212,6 +212,20 @@ class Turno:
         resumen["total"] = len(turnos)
         return resumen, turnos
 
+    @staticmethod
+    def eliminar(id_turno):
+        """
+        Borra la solicitud de la base de datos local de Maxwell.
+        Se usa al cancelar: como la solicitud nunca se envio al
+        sistema principal, no tiene sentido conservarla ni contarla
+        como pendiente de exportar.
+        """
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("DELETE FROM turnos WHERE id = ?", (id_turno,))
+        conexion.commit()
+        conexion.close()
+
     def cambiar_estado(self, nuevo_estado):
         """
         Cambia el estado de la solicitud (ej: cancelar antes de enviarla,

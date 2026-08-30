@@ -51,7 +51,7 @@ class TestPaciente(unittest.TestCase):
             paciente.guardar()
 
     def test_rechaza_telefono_celular_corto(self):
-        paciente = Paciente("X", "Y", "22334455", "1122334455", "x@test.com")
+        paciente = Paciente("X", "Y", "22334455", "112233445", "x@test.com")
         with self.assertRaises(ValueError):
             paciente.guardar()
 

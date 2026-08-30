@@ -44,8 +44,8 @@ def validar_email(email):
 
 def validar_telefono(telefono):
     """
-    Un celular argentino valido tiene 11 digitos en total
-    (9 + codigo de area + numero). Permite guiones o espacios en la escritura.
+    Un celular argentino valido tiene al menos 10 digitos en total.
+    Permite guiones o espacios en la escritura.
     """
     if not telefono:
         raise ValueError("El telefono es obligatorio.")

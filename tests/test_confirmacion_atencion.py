@@ -45,14 +45,16 @@ class TestConfirmacionAtencion(unittest.TestCase):
         with self.assertRaises(ValueError):
             ConfirmacionAtencion("", "12345678").guardar()
 
-    def test_rechaza_paciente_inexistente(self):
+    def test_rechaza_dni_con_formato_invalido(self):
         with self.assertRaises(ValueError):
-            ConfirmacionAtencion("0809899", "99999999").guardar()
+            ConfirmacionAtencion("0809899", "abc123").guardar()
 
-    def test_rechaza_paciente_inactivo(self):
-        Paciente.eliminar("12345678")
-        with self.assertRaises(ValueError):
-            ConfirmacionAtencion("0809899", "12345678").guardar()
+    def test_acepta_dni_valido_aunque_el_paciente_no_este_registrado_en_maxwell(self):
+        # Puede ser un paciente que el sistema principal ya conocia
+        # de antes, sin pasar nunca por Maxwell.
+        confirmacion = ConfirmacionAtencion("0809899", "99999999")
+        confirmacion.guardar()
+        self.assertIsNotNone(confirmacion.id)
 
     def test_no_esta_exportada_por_defecto(self):
         confirmacion = ConfirmacionAtencion("0809899", "12345678")
