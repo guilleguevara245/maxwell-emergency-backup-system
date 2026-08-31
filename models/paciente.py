@@ -1,5 +1,5 @@
 """
-Maxwell Medic System - by Guillermo Guevara
+Maxwell Emergency Backup System - by Guillermo Guevara
 
 Modelo de Paciente: representa la entidad y sus operaciones
 contra la base de datos (crear, leer, actualizar, borrar).
@@ -139,5 +139,19 @@ class Paciente:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute("UPDATE pacientes SET activo = 1 WHERE dni = ?", (dni,))
+        conexion.commit()
+        conexion.close()
+
+    @staticmethod
+    def eliminar_todos():
+        """
+        Borra TODOS los pacientes de la base local, sin posibilidad de
+        deshacerlo. Se usa al cerrar el uso diario de Maxwell, despues
+        de exportar los datos: los pacientes son informacion transitoria
+        de una jornada de emergencia, no un registro permanente.
+        """
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("DELETE FROM pacientes")
         conexion.commit()
         conexion.close()

@@ -1,5 +1,5 @@
 """
-Maxwell Medic System - by Guillermo Guevara
+Maxwell Emergency Backup System - by Guillermo Guevara
 
 Modelo de ConfirmacionAtencion: un registro libre para anotar que un
 paciente fue atendido, usando el codigo de turno que le dio el sistema
@@ -95,5 +95,19 @@ class ConfirmacionAtencion:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute("UPDATE confirmaciones_atencion SET exportado = 1 WHERE exportado = 0")
+        conexion.commit()
+        conexion.close()
+
+    @staticmethod
+    def eliminar_todas():
+        """
+        Borra TODAS las confirmaciones de la base local, sin posibilidad
+        de deshacerlo. Se usa al cerrar el uso diario de Maxwell,
+        despues de exportar: son informacion transitoria de una
+        jornada de emergencia, no un registro permanente.
+        """
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("DELETE FROM confirmaciones_atencion")
         conexion.commit()
         conexion.close()

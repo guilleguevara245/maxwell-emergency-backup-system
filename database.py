@@ -1,5 +1,5 @@
 """
-Maxwell Medic System - by Guillermo Guevara
+Maxwell Emergency Backup System - by Guillermo Guevara
 
 Modulo de conexion y creacion de la base de datos SQLite.
 """

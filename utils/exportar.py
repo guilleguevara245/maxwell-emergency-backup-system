@@ -1,12 +1,23 @@
 """
-Maxwell Medic System - by Guillermo Guevara
+Maxwell Emergency Backup System - by Guillermo Guevara
 
 Exportacion de datos a archivos PDF, pensada para poder sacar un
-respaldo legible y facil de entender (mas claro que un CSV a simple
-vista) para pasarle la informacion al sistema principal.
+respaldo legible y facil de entender para pasarle la informacion al
+sistema principal una vez que vuelva a estar disponible.
+
+Cada exportacion completa crea su propia carpeta con fecha y hora
+dentro de "exportado/", para no mezclar los respaldos de distintos
+dias ni de distintos turnos del mismo dia (por ejemplo, turno tarde
+y turno noche) si Maxwell se usa mas de una vez. Despues de generar
+los PDF, se borran los pacientes, las solicitudes de turno y las
+confirmaciones de atencion de la base local (los medicos NO se
+borran: son el unico dato permanente de Maxwell), para que el
+sistema quede listo para un nuevo uso sin arrastrar datos viejos.
 """
 
 import os
+import shutil
+from datetime import datetime
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
@@ -26,9 +37,19 @@ COLOR_MARCA = colors.HexColor("#B02A2A")  # rojo Maxwell
 ESTILOS = getSampleStyleSheet()
 
 
-def _asegurar_carpeta():
-    if not os.path.exists(CARPETA_EXPORTACION):
-        os.makedirs(CARPETA_EXPORTACION)
+def _carpeta_de_hoy():
+    """
+    Devuelve (y crea si hace falta) la carpeta de exportacion del
+    momento actual, por ejemplo "exportado/registro de datos
+    30-08-2026 19-10". Incluye la hora ademas de la fecha para que
+    dos exportaciones del mismo dia (por ejemplo, turno tarde y turno
+    noche) queden en carpetas separadas en vez de pisarse entre si.
+    """
+    nombre_carpeta = datetime.now().strftime("registro de datos %d-%m-%Y %H-%M")
+    ruta = os.path.join(CARPETA_EXPORTACION, nombre_carpeta)
+    if not os.path.exists(ruta):
+        os.makedirs(ruta)
+    return ruta
 
 
 def _ruta_asset(nombre_archivo):
@@ -73,13 +94,13 @@ def _armar_documento(ruta, elementos_extra_al_inicio, titulo, encabezados, filas
     documento.build(elementos)
 
 
-def exportar_pacientes_pdf():
+def exportar_pacientes_pdf(carpeta=None):
     """
     Exporta todos los pacientes (activos e inactivos) a un PDF.
     Devuelve la ruta del archivo generado.
     """
-    _asegurar_carpeta()
-    ruta = os.path.join(CARPETA_EXPORTACION, "pacientes.pdf")
+    carpeta = carpeta or _carpeta_de_hoy()
+    ruta = os.path.join(carpeta, "pacientes.pdf")
 
     encabezados = ["DNI", "Nombre", "Apellido", "Telefono", "Tel. fijo", "Email", "Activo", "Registrado"]
     filas = []
@@ -97,13 +118,13 @@ def exportar_pacientes_pdf():
     return ruta
 
 
-def exportar_medicos_pdf():
+def exportar_medicos_pdf(carpeta=None):
     """
     Exporta todos los medicos (activos e inactivos) a un PDF.
     Devuelve la ruta del archivo generado.
     """
-    _asegurar_carpeta()
-    ruta = os.path.join(CARPETA_EXPORTACION, "medicos.pdf")
+    carpeta = carpeta or _carpeta_de_hoy()
+    ruta = os.path.join(carpeta, "medicos.pdf")
 
     encabezados = ["Legajo", "DNI", "Nombre", "Apellido", "Especialidad", "Telefono", "Email", "Activo"]
     filas = []
@@ -121,15 +142,14 @@ def exportar_medicos_pdf():
     return ruta
 
 
-def exportar_turnos_pdf():
+def exportar_turnos_pdf(carpeta=None):
     """
     Exporta todas las solicitudes de turno a un PDF, con la imagen de
-    cabecera de "Turnos Pendientes". Marca las solicitudes exportadas
-    como enviadas al sistema principal.
+    cabecera de "Turnos Pendientes".
     Devuelve la ruta del archivo generado.
     """
-    _asegurar_carpeta()
-    ruta = os.path.join(CARPETA_EXPORTACION, "turnos_pendientes.pdf")
+    carpeta = carpeta or _carpeta_de_hoy()
+    ruta = os.path.join(carpeta, "turnos_pendientes.pdf")
 
     turnos = []
     for paciente in Paciente.listar_todos(incluir_inactivos=True):
@@ -148,19 +168,17 @@ def exportar_turnos_pdf():
         elementos_iniciales.append(Spacer(1, 12))
 
     _armar_documento(ruta, elementos_iniciales, "Solicitudes de turno para asignar", encabezados, filas)
-    Turno.marcar_todos_como_exportados()
     return ruta
 
 
-def exportar_atenciones_pdf():
+def exportar_atenciones_pdf(carpeta=None):
     """
     Exporta las confirmaciones de atencion a un PDF, con la imagen de
-    cabecera de "Turnos Atendidos". Marca las confirmaciones
-    exportadas como enviadas.
+    cabecera de "Turnos Atendidos".
     Devuelve la ruta del archivo generado.
     """
-    _asegurar_carpeta()
-    ruta = os.path.join(CARPETA_EXPORTACION, "turnos_atendidos.pdf")
+    carpeta = carpeta or _carpeta_de_hoy()
+    ruta = os.path.join(carpeta, "turnos_atendidos.pdf")
 
     encabezados = ["Codigo de turno", "DNI Paciente", "Registrado"]
     filas = []
@@ -174,20 +192,68 @@ def exportar_atenciones_pdf():
         elementos_iniciales.append(Spacer(1, 12))
 
     _armar_documento(ruta, elementos_iniciales, "Turnos confirmados como atendidos", encabezados, filas)
-    ConfirmacionAtencion.marcar_todas_como_exportadas()
     return ruta
 
 
 def exportar_todo_pdf():
     """
     Exporta pacientes, medicos, solicitudes de turno y confirmaciones
-    de atencion, cada uno a su propio PDF dentro de la carpeta
-    "exportado/". Devuelve la lista de rutas generadas.
+    de atencion, cada uno a su propio PDF dentro de una carpeta con
+    la fecha de hoy, para no mezclar respaldos de distintos dias.
+
+    Despues de generar los 4 PDF, borra los pacientes, las solicitudes
+    de turno y las confirmaciones de atencion de la base local (los
+    medicos se conservan), dejando Maxwell listo para una nueva
+    jornada de emergencia sin arrastrar datos del dia anterior.
+
+    Devuelve la lista de rutas generadas.
     """
+    carpeta = _carpeta_de_hoy()
     rutas = [
-        exportar_pacientes_pdf(),
-        exportar_medicos_pdf(),
-        exportar_turnos_pdf(),
-        exportar_atenciones_pdf(),
+        exportar_pacientes_pdf(carpeta),
+        exportar_medicos_pdf(carpeta),
+        exportar_turnos_pdf(carpeta),
+        exportar_atenciones_pdf(carpeta),
     ]
+
+    Turno.eliminar_todos()
+    Paciente.eliminar_todos()
+    ConfirmacionAtencion.eliminar_todas()
+
     return rutas
+
+
+def listar_carpetas_respaldo():
+    """
+    Devuelve la lista de carpetas de respaldo generadas hasta ahora
+    dentro de "exportado/", ordenadas de la mas vieja a la mas nueva.
+    """
+    if not os.path.exists(CARPETA_EXPORTACION):
+        return []
+    carpetas = [
+        nombre for nombre in os.listdir(CARPETA_EXPORTACION)
+        if os.path.isdir(os.path.join(CARPETA_EXPORTACION, nombre))
+    ]
+    return sorted(carpetas)
+
+
+def eliminar_carpeta_respaldo(nombre_carpeta):
+    """
+    Elimina una carpeta de respaldo especifica (con todos sus PDF
+    adentro). Devuelve True si la borro, False si no existia.
+    """
+    ruta = os.path.join(CARPETA_EXPORTACION, nombre_carpeta)
+    if not os.path.isdir(ruta):
+        return False
+    shutil.rmtree(ruta)
+    return True
+
+
+def eliminar_todas_las_carpetas_respaldo():
+    """
+    Elimina TODAS las carpetas de respaldo generadas hasta ahora.
+    No afecta a la base de datos de Maxwell, solo a los PDF ya
+    exportados en disco.
+    """
+    for nombre_carpeta in listar_carpetas_respaldo():
+        eliminar_carpeta_respaldo(nombre_carpeta)

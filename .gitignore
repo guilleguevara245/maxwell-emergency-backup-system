@@ -1,8 +1,13 @@
 # Base de datos (se genera localmente, no se sube)
 *.db
 
-# Exportaciones CSV (datos generados, no se suben)
+# Exportaciones (PDF generados, no se suben)
 exportado/
+
+# Artefactos de PyInstaller (el .exe se genera localmente, no se sube)
+build/
+dist/
+*.spec
 
 # Archivos de Python
 __pycache__/

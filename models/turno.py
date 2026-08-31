@@ -1,5 +1,5 @@
 """
-Maxwell Medic System - by Guillermo Guevara
+Maxwell Emergency Backup System - by Guillermo Guevara
 
 Modelo de Turno: representa una SOLICITUD de turno, no un turno ya
 agendado. Maxwell es un sistema de respaldo que se usa cuando el
@@ -223,6 +223,20 @@ class Turno:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute("DELETE FROM turnos WHERE id = ?", (id_turno,))
+        conexion.commit()
+        conexion.close()
+
+    @staticmethod
+    def eliminar_todos():
+        """
+        Borra TODAS las solicitudes de la base local, sin posibilidad
+        de deshacerlo. Se usa al cerrar el uso diario de Maxwell,
+        despues de exportar: las solicitudes son informacion transitoria
+        de una jornada de emergencia, no un registro permanente.
+        """
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("DELETE FROM turnos")
         conexion.commit()
         conexion.close()
 
