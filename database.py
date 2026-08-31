@@ -95,6 +95,7 @@ def crear_tablas():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             codigo_turno TEXT NOT NULL,
             paciente_dni TEXT NOT NULL,
+            observaciones TEXT,
             exportado INTEGER NOT NULL DEFAULT 0,
             fecha_registro TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )

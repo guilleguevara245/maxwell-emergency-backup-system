@@ -180,10 +180,10 @@ def exportar_atenciones_pdf(carpeta=None):
     carpeta = carpeta or _carpeta_de_hoy()
     ruta = os.path.join(carpeta, "turnos_atendidos.pdf")
 
-    encabezados = ["Codigo de turno", "DNI Paciente", "Registrado"]
+    encabezados = ["Codigo de turno", "DNI Paciente", "Observaciones", "Registrado"]
     filas = []
     for c in ConfirmacionAtencion.listar_todas():
-        filas.append([c.codigo_turno, c.paciente_dni, c.fecha_registro])
+        filas.append([c.codigo_turno, c.paciente_dni, c.observaciones or "-", c.fecha_registro])
 
     elementos_iniciales = []
     ruta_header = _ruta_asset("header_turnos_atendidos.jpg")

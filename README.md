@@ -4,7 +4,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-87%20passing-brightgreen" alt="87 tests passing">
+  <img src="https://img.shields.io/badge/tests-91%20passing-brightgreen" alt="91 tests passing">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT License">
   <img src="https://img.shields.io/badge/status-stable-success" alt="Stable">
 </p>
@@ -13,11 +13,13 @@
 
 Sistema de contingencia para consultorios médicos pequeños, desarrollado en Python con persistencia local en SQLite.
 
-**by Guillermo Guevara**
-
 ## Descripción
 
 Maxwell Emergency Backup System resuelve un problema operativo concreto: cuando el sistema de gestión principal de un consultorio deja de funcionar en horario de atención, el personal administrativo pierde la capacidad de registrar pacientes y turnos, y esa información termina anotada en papel o, peor, se pierde directamente.
+
+Esta aplicación está pensada para usarse en Argentina, y nace de una situación que vi repetirse muchas veces en consultorios y centros de salud del país: caídas de sistema, cortes de conexión o servidores que se cuelgan justo en el momento de más movimiento, dejando a la recepción sin forma de anotar nada de manera ordenada. De más joven vi este problema de cerca varias veces, con recepcionistas anotando datos en hojas sueltas, post-its o cuadernos que después había que descifrar y cargar a mano, con el riesgo constante de perder información o de cargarla mal. De esa experiencia surgió la idea de Maxwell: no reemplazar al sistema principal, sino darle al consultorio una red de contención simple para esos momentos, que cualquiera pueda usar sin capacitación previa.
+
+Por eso, además de resolver el problema técnico, Maxwell se diseñó pensando en la facilidad de uso: un menú de texto simple, sin curva de aprendizaje, pensado para que lo pueda operar sin problemas incluso el personal administrativo menos acostumbrado a la tecnología, que en un momento de tensión (el sistema caído, pacientes esperando) necesita algo directo y sin fricción, no una herramienta más para aprender.
 
 Maxwell funciona como una capa de contingencia local, sin dependencias de red ni de servicios externos: corre enteramente en la computadora del consultorio y no requiere conexión a internet una vez instalado. Permite registrar pacientes, mantener un padrón de médicos y capturar solicitudes de turno mientras el sistema principal está fuera de servicio, para después exportar todo en un formato claro y volcarlo al sistema principal apenas se restablezca.
 
@@ -32,12 +34,12 @@ Del mismo modo, cada uso de Maxwell se trata como un evento aislado: al exportar
 - Registro de solicitudes de turno: paciente, especialidad, médico específico si se pidió (con listado de médicos disponibles de esa especialidad), motivo y observaciones
 - Búsqueda de médicos por especialidad, sin distinguir mayúsculas de minúsculas
 - Cancelación de solicitudes del día mediante un listado numerado, sin necesidad de conocer identificadores internos
-- Registro de confirmaciones de atención: código de turno del sistema principal más DNI del paciente, para dejar asentado que alguien fue atendido y cargarlo después
+- Registro de confirmaciones de atención: código de turno del sistema principal, DNI del paciente y observaciones opcionales, para dejar asentado que alguien fue atendido y cargarlo después
 - Avisos en el menú principal indicando cuántas solicitudes y confirmaciones siguen pendientes de trasladar al sistema principal
 - Exportación de todos los datos a PDF con identidad visual propia, organizados en una carpeta con la fecha del día
 - Limpieza automática del estado transitorio después de cada exportación, preservando el padrón de médicos
 - Validaciones de formato en todos los datos sensibles (DNI, email, teléfono, legajo)
-- Suite de 87 tests automáticos cubriendo la totalidad de la lógica de negocio
+- Suite de 91 tests automáticos cubriendo la totalidad de la lógica de negocio
 
 ## Tecnologías
 
@@ -60,7 +62,7 @@ maxwell-emergency-backup-system/
 ├── utils/
 │   ├── validaciones.py            # Validaciones de formato reutilizables
 │   └── exportar.py                # Exportacion a PDF y limpieza post-exportacion
-├── tests/                         # 87 tests automaticos (unittest)
+├── tests/                         # 91 tests automaticos (unittest)
 ├── assets/                        # Logo e imagenes de cabecera de los PDF
 ├── README.md
 ├── requirements.txt
@@ -101,10 +103,6 @@ pyinstaller --onefile --name Maxwell main.py
 ```
 
 El ejecutable queda en `dist/Maxwell.exe`. Es necesario copiar la carpeta `assets/` junto al `.exe` (PyInstaller no empaqueta esos archivos automáticamente con `--onefile`), ya que son las imágenes de cabecera de los PDF generados.
-
-## Convención de commits
-
-El historial de este repositorio sigue commits atómicos por funcionalidad: cada commit corresponde a un cambio coherente y probado (una entidad, una validación, una corrección puntual), en lugar de acumular cambios sin relación entre sí. Esto permite recorrer la evolución del proyecto commit por commit y entender el porqué de cada decisión de diseño.
 
 ## Estado del proyecto y versión estable
 

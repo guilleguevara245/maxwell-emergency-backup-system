@@ -87,6 +87,16 @@ class TestConfirmacionAtencion(unittest.TestCase):
         self.assertIn("0809899", texto)
         self.assertIn("12345678", texto)
 
+    def test_observaciones_es_opcional(self):
+        confirmacion = ConfirmacionAtencion("0809899", "12345678")
+        confirmacion.guardar()
+        self.assertIsNone(confirmacion.observaciones)
+
+    def test_guarda_y_recupera_observaciones(self):
+        ConfirmacionAtencion("0809899", "12345678", "Paciente llego tarde, se atendio igual").guardar()
+        confirmaciones = ConfirmacionAtencion.listar_todas()
+        self.assertEqual(confirmaciones[0].observaciones, "Paciente llego tarde, se atendio igual")
+
 
 if __name__ == "__main__":
     unittest.main()

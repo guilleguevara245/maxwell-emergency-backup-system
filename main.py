@@ -23,21 +23,121 @@ from utils.exportar import (
     eliminar_todas_las_carpetas_respaldo,
 )
 
+ANCHO_CAJA = 60
+
+
+# ---------- INTERFAZ DE CONSOLA ----------
+
+def _caja(secciones, ancho=ANCHO_CAJA):
+    """
+    Arma una caja de texto tipo panel de consola a partir de una lista
+    de secciones (cada seccion es una lista de lineas), separando cada
+    seccion de la siguiente con una linea divisoria.
+    """
+    borde_arriba = "\u2554" + "\u2550" * (ancho + 2) + "\u2557"
+    borde_medio = "\u2560" + "\u2550" * (ancho + 2) + "\u2563"
+    borde_abajo = "\u255a" + "\u2550" * (ancho + 2) + "\u255d"
+
+    lineas = [borde_arriba]
+    for indice, seccion in enumerate(secciones):
+        if indice > 0:
+            lineas.append(borde_medio)
+        for linea in seccion:
+            lineas.append("\u2551 " + linea.ljust(ancho) + " \u2551")
+    lineas.append(borde_abajo)
+    return "\n".join(lineas)
+
+
+def mostrar_menu(titulo, opciones, texto_volver="Volver", avisos=None, ancho=ANCHO_CAJA):
+    """
+    Imprime un menu con el estilo de panel de Maxwell: titulo centrado,
+    opciones numeradas [01], [02]... y la opcion de volver/salir
+    marcada como [00], separada del resto.
+    """
+    if avisos:
+        for aviso in avisos:
+            print(f"[!] {aviso}")
+
+    seccion_titulo = [titulo.center(ancho)]
+
+    seccion_opciones = [""]
+    for numero, texto in enumerate(opciones, start=1):
+        seccion_opciones.append(f"[{numero}] {texto}")
+    seccion_opciones.append("")
+
+    seccion_volver = [f"[0] \u2190 {texto_volver}"]
+
+    print("\n" + _caja([seccion_titulo, seccion_opciones, seccion_volver], ancho))
+
+
+def elegir_opcion(prompt="Seleccionar"):
+    return input(f"\n{prompt} > ").strip()
+
+
+def ok(mensaje):
+    print(f"[\u2713] {mensaje}")
+
+
+def err(mensaje):
+    print(f"[x] {mensaje}")
+
+
+def esperar_tecla(mensaje="Presiona una tecla para continuar..."):
+    """
+    Pausa la ejecucion hasta que el usuario presione una tecla.
+    Intenta una lectura de tecla unica (sin necesidad de Enter) tanto
+    en Windows como en sistemas tipo Unix con terminal interactiva; si
+    no hay una terminal disponible (por ejemplo, al correr Maxwell
+    empaquetado o de forma no interactiva), cae de vuelta a esperar un
+    Enter para no romper la ejecucion.
+    """
+    print(f"\n{mensaje}")
+    try:
+        import msvcrt
+        msvcrt.getch()
+        return
+    except ImportError:
+        pass
+
+    try:
+        import sys
+        import termios
+        import tty
+
+        descriptor = sys.stdin.fileno()
+        configuracion_previa = termios.tcgetattr(descriptor)
+        try:
+            tty.setraw(descriptor)
+            sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(descriptor, termios.TCSADRAIN, configuracion_previa)
+        return
+    except Exception:
+        try:
+            input()
+        except EOFError:
+            pass
+
 
 def pausar():
-    input("\nPresiona Enter para continuar...")
+    esperar_tecla("Presiona una tecla para continuar...")
+
+
+def despedida():
+    print("\n" + _caja([["Shutting down Maxwell. Maximum backup. Well saved.".center(ANCHO_CAJA)]]))
+    esperar_tecla("Presiona una tecla para salir...")
 
 
 # ---------- MENU DE PACIENTES ----------
 
 def menu_pacientes():
     while True:
-        print("\n--- Gestion de Pacientes ---")
-        print("1. Dar de alta un paciente")
-        print("2. Listar pacientes")
-        print("3. Actualizar un paciente")
-        print("4. Volver al menu principal")
-        opcion = input("Elegi una opcion: ").strip()
+        mostrar_menu("GESTION DE PACIENTES", [
+            "Dar de alta un paciente",
+            "Listar pacientes",
+            "Actualizar un paciente",
+        ], texto_volver="Volver al menu principal")
+        opcion = elegir_opcion()
 
         if opcion == "1":
             dni = input("DNI: ").strip()
@@ -49,9 +149,9 @@ def menu_pacientes():
             try:
                 paciente = Paciente(nombre, apellido, dni, telefono, email, telefono_fijo)
                 paciente.guardar()
-                print(f"Paciente creado con exito: {paciente}")
+                ok(f"Paciente creado con exito: {paciente}")
             except Exception as error:
-                print(f"No se pudo crear el paciente: {error}")
+                err(f"No se pudo crear el paciente: {error}")
             pausar()
 
         elif opcion == "2":
@@ -66,7 +166,7 @@ def menu_pacientes():
             dni = input("DNI del paciente a actualizar: ").strip()
             paciente = Paciente.buscar_por_dni(dni)
             if paciente is None:
-                print("No existe un paciente con ese DNI.")
+                err("No existe un paciente con ese DNI.")
             else:
                 print(f"Datos actuales: {paciente}")
                 paciente.nombre = input(f"Nuevo nombre [{paciente.nombre}]: ").strip() or paciente.nombre
@@ -75,28 +175,28 @@ def menu_pacientes():
                 paciente.telefono_fijo = input(f"Nuevo telefono fijo [{paciente.telefono_fijo}]: ").strip() or paciente.telefono_fijo
                 try:
                     paciente.actualizar()
-                    print("Paciente actualizado.")
+                    ok("Paciente actualizado.")
                 except Exception as error:
-                    print(f"No se pudo actualizar: {error}")
+                    err(f"No se pudo actualizar: {error}")
             pausar()
 
-        elif opcion == "4":
+        elif opcion == "0":
             break
         else:
-            print("Opcion invalida.")
+            err("Opcion invalida.")
 
 
 # ---------- MENU DE MEDICOS ----------
 
 def menu_medicos():
     while True:
-        print("\n--- Gestion de Medicos ---")
-        print("1. Dar de alta un medico")
-        print("2. Listar medicos")
-        print("3. Buscar medicos por especialidad")
-        print("4. Desactivar un medico")
-        print("5. Volver al menu principal")
-        opcion = input("Elegi una opcion: ").strip()
+        mostrar_menu("GESTION DE MEDICOS", [
+            "Dar de alta un medico",
+            "Listar medicos",
+            "Buscar medicos por especialidad",
+            "Desactivar un medico",
+        ], texto_volver="Volver al menu principal")
+        opcion = elegir_opcion()
 
         if opcion == "1":
             legajo = input("Legajo: ").strip()
@@ -109,9 +209,9 @@ def menu_medicos():
             try:
                 medico = Medico(legajo, dni, nombre, apellido, especialidad, telefono, email)
                 medico.guardar()
-                print(f"Medico creado con exito: {medico}")
+                ok(f"Medico creado con exito: {medico}")
             except Exception as error:
-                print(f"No se pudo crear el medico: {error}")
+                err(f"No se pudo crear el medico: {error}")
             pausar()
 
         elif opcion == "2":
@@ -134,26 +234,26 @@ def menu_medicos():
         elif opcion == "4":
             legajo = input("Legajo del medico a desactivar: ").strip()
             Medico.eliminar(legajo)
-            print("Medico desactivado (el historial de turnos se conserva).")
+            ok("Medico desactivado (el historial de turnos se conserva).")
             pausar()
 
-        elif opcion == "5":
+        elif opcion == "0":
             break
         else:
-            print("Opcion invalida.")
+            err("Opcion invalida.")
 
 
 # ---------- MENU DE TURNOS (solicitudes) ----------
 
 def menu_turnos():
     while True:
-        print("\n--- Gestion de Solicitudes de Turno ---")
-        print("1. Registrar una solicitud de turno")
-        print("2. Listar solicitudes por paciente")
-        print("3. Cancelar una solicitud")
-        print("4. Registrar turno atendido (codigo del sistema principal + DNI)")
-        print("5. Volver al menu principal")
-        opcion = input("Elegi una opcion: ").strip()
+        mostrar_menu("SOLICITUDES DE TURNO", [
+            "Registrar una solicitud de turno",
+            "Listar solicitudes por paciente",
+            "Cancelar una solicitud",
+            "Registrar turno atendido (codigo del sistema principal + DNI)",
+        ], texto_volver="Volver al menu principal")
+        opcion = elegir_opcion()
 
         if opcion == "1":
             paciente_dni = input("DNI del paciente: ").strip()
@@ -178,9 +278,9 @@ def menu_turnos():
                 turno = Turno(paciente_dni, especialidad, motivo,
                               medico_legajo=medico_legajo, observaciones=observaciones)
                 turno.guardar()
-                print(f"Solicitud registrada con exito: {turno}")
+                ok(f"Solicitud registrada con exito: {turno}")
             except ValueError as error:
-                print(f"No se pudo registrar la solicitud: {error}")
+                err(f"No se pudo registrar la solicitud: {error}")
             pausar()
 
         elif opcion == "2":
@@ -210,40 +310,41 @@ def menu_turnos():
             if not seleccion:
                 print("Operacion cancelada.")
             elif not seleccion.isdigit() or not (1 <= int(seleccion) <= len(solicitudes_hoy)):
-                print("Numero invalido.")
+                err("Numero invalido.")
             else:
                 turno_elegido = solicitudes_hoy[int(seleccion) - 1]
                 Turno.eliminar(turno_elegido.id)
-                print("Solicitud cancelada y eliminada del sistema local.")
+                ok("Solicitud cancelada y eliminada del sistema local.")
             pausar()
 
         elif opcion == "4":
             codigo_turno = input("Codigo de turno (segun el sistema principal): ").strip()
             paciente_dni = input("DNI del paciente: ").strip()
+            observaciones = input("Observaciones (opcional): ").strip() or None
             try:
-                confirmacion = ConfirmacionAtencion(codigo_turno, paciente_dni)
+                confirmacion = ConfirmacionAtencion(codigo_turno, paciente_dni, observaciones)
                 confirmacion.guardar()
-                print(f"Confirmacion registrada: {confirmacion}")
+                ok(f"Confirmacion registrada: {confirmacion}")
             except ValueError as error:
-                print(f"No se pudo registrar la confirmacion: {error}")
+                err(f"No se pudo registrar la confirmacion: {error}")
             pausar()
 
-        elif opcion == "5":
+        elif opcion == "0":
             break
         else:
-            print("Opcion invalida.")
+            err("Opcion invalida.")
 
 
 # ---------- MENU DE RESPALDOS EXPORTADOS ----------
 
 def menu_respaldos():
     while True:
-        print("\n--- Gestion de Respaldos Exportados ---")
-        print("1. Listar carpetas de respaldo")
-        print("2. Eliminar una carpeta especifica")
-        print("3. Eliminar todas las carpetas de respaldo")
-        print("4. Volver al menu principal")
-        opcion = input("Elegi una opcion: ").strip()
+        mostrar_menu("RESPALDOS EXPORTADOS", [
+            "Listar carpetas de respaldo",
+            "Eliminar una carpeta especifica",
+            "Eliminar todas las carpetas de respaldo",
+        ], texto_volver="Volver al menu principal")
+        opcion = elegir_opcion()
 
         if opcion == "1":
             carpetas = listar_carpetas_respaldo()
@@ -270,13 +371,13 @@ def menu_respaldos():
             if not seleccion:
                 print("Operacion cancelada.")
             elif not seleccion.isdigit() or not (1 <= int(seleccion) <= len(carpetas)):
-                print("Numero invalido.")
+                err("Numero invalido.")
             else:
                 nombre_elegido = carpetas[int(seleccion) - 1]
                 confirmacion = input(f"Confirmar eliminacion de '{nombre_elegido}'? (si/no): ").strip().lower()
                 if confirmacion == "si":
                     eliminar_carpeta_respaldo(nombre_elegido)
-                    print("Carpeta eliminada.")
+                    ok("Carpeta eliminada.")
                 else:
                     print("Operacion cancelada.")
             pausar()
@@ -291,15 +392,15 @@ def menu_respaldos():
             confirmacion = input(f"Esto va a eliminar las {len(carpetas)} carpetas de respaldo. Confirmar? (si/no): ").strip().lower()
             if confirmacion == "si":
                 eliminar_todas_las_carpetas_respaldo()
-                print("Todas las carpetas de respaldo fueron eliminadas.")
+                ok("Todas las carpetas de respaldo fueron eliminadas.")
             else:
                 print("Operacion cancelada.")
             pausar()
 
-        elif opcion == "4":
+        elif opcion == "0":
             break
         else:
-            print("Opcion invalida.")
+            err("Opcion invalida.")
 
 
 # ---------- MENU PRINCIPAL ----------
@@ -309,18 +410,21 @@ def menu_principal():
     while True:
         pendientes_turnos = Turno.contar_pendientes_de_exportar()
         pendientes_atenciones = ConfirmacionAtencion.contar_pendientes_de_exportar()
-        print("\n===== Maxwell Emergency Backup System =====")
+
+        avisos = []
         if pendientes_turnos > 0:
-            print(f"AVISO: tenes {pendientes_turnos} solicitud(es) de turno pendiente(s) por asignar al sistema principal.")
+            avisos.append(f"Tenes {pendientes_turnos} solicitud(es) de turno pendiente(s) por asignar al sistema principal.")
         if pendientes_atenciones > 0:
-            print(f"AVISO: tenes {pendientes_atenciones} turno(s) atendido(s) pendiente(s) por cargar en el sistema principal.")
-        print("1. Gestion de Pacientes")
-        print("2. Gestion de Medicos")
-        print("3. Gestion de Solicitudes de Turno")
-        print("4. Exportar datos a PDF (respaldo)")
-        print("5. Gestion de Respaldos Exportados")
-        print("6. Salir")
-        opcion = input("Elegi una opcion: ").strip()
+            avisos.append(f"Tenes {pendientes_atenciones} turno(s) atendido(s) pendiente(s) por cargar en el sistema principal.")
+
+        mostrar_menu("MAXWELL EMERGENCY BACKUP SYSTEM", [
+            "Gestion de Pacientes",
+            "Gestion de Medicos",
+            "Gestion de Solicitudes de Turno",
+            "Exportar datos a PDF (respaldo)",
+            "Gestion de Respaldos Exportados",
+        ], texto_volver="Salir", avisos=avisos)
+        opcion = elegir_opcion()
 
         if opcion == "1":
             menu_pacientes()
@@ -339,24 +443,25 @@ def menu_principal():
                     print("\nDatos exportados con exito:")
                     for ruta in rutas:
                         print(f"  - {ruta}")
-                    print("\nPacientes, solicitudes y confirmaciones borrados de Maxwell.")
+                    ok("Pacientes, solicitudes y confirmaciones borrados de Maxwell.")
                 except Exception as error:
-                    print(f"\nNo se pudo completar la exportacion: {error}")
+                    err(f"No se pudo completar la exportacion: {error}")
                     print("No se borro ningun dato local.")
             else:
                 print("Exportacion cancelada.")
             pausar()
         elif opcion == "5":
             menu_respaldos()
-        elif opcion == "6":
-            print("\nShutting down Maxwell. Maximum backup. Well saved.")
+        elif opcion == "0":
+            despedida()
             break
         else:
-            print("Opcion invalida.")
+            err("Opcion invalida.")
 
 
 if __name__ == "__main__":
     try:
         menu_principal()
     except KeyboardInterrupt:
-        print("\n\nInterrupted. Shutting down Maxwell. Maximum backup. Well saved.")
+        print()
+        despedida()
