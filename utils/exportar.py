@@ -31,7 +31,48 @@ from models.turno import Turno
 from models.confirmacion_atencion import ConfirmacionAtencion
 
 CARPETA_EXPORTACION = "exportado"
-CARPETA_ASSETS = "assets"
+
+
+def _detectar_carpeta_assets():
+    """
+    Ubica la carpeta "assets" (logos/encabezados de los PDF) sea cual
+    sea la forma en que se este corriendo Maxwell.
+
+    No alcanza con una ruta relativa fija tipo "assets": eso funciona
+    corriendo "python main.py" desde la raiz del proyecto, pero un
+    ejecutable --onefile de Nuitka se auto-extrae a una carpeta
+    temporal DISTINTA en cada arranque, y esa ruta relativa termina
+    apuntando a un lugar que no existe (por eso los PDF se generaban
+    sin el logo, sin ningun error visible: _ruta_asset() ya estaba
+    preparada para seguir sin imagen si no encuentra el archivo).
+    """
+    candidatos = []
+
+    # Nuitka inyecta la variable __compiled__ en los modulos que
+    # compila. "containing_dir" apunta a la carpeta correcta tanto en
+    # modo standalone como en modo onefile (ahi es donde termina la
+    # carpeta "assets" que build_exe.bat empaqueta con
+    # --include-data-dir=assets=assets).
+    contenedor_compilado = globals().get("__compiled__")
+    if contenedor_compilado is not None:
+        candidatos.append(getattr(contenedor_compilado, "containing_dir", None))
+
+    # Corriendo sin compilar ("python main.py"): assets esta un nivel
+    # arriba de este archivo (utils/exportar.py -> raiz del proyecto),
+    # sin importar cual sea el directorio de trabajo actual.
+    candidatos.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    for candidato in candidatos:
+        if candidato:
+            posible = os.path.join(candidato, "assets")
+            if os.path.isdir(posible):
+                return posible
+
+    # Ultimo recurso: como antes, relativo al directorio de trabajo actual.
+    return "assets"
+
+
+CARPETA_ASSETS = _detectar_carpeta_assets()
 
 COLOR_MARCA = colors.HexColor("#B02A2A")  # rojo Maxwell
 ESTILOS = getSampleStyleSheet()

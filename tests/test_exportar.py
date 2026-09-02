@@ -8,6 +8,8 @@ los PDF, cree la carpeta con fecha, y borre los datos transitorios
 
 import os
 import shutil
+import subprocess
+import sys
 import unittest
 
 import database
@@ -18,10 +20,47 @@ from models.confirmacion_atencion import ConfirmacionAtencion
 from utils.exportar import (
     exportar_todo_pdf,
     CARPETA_EXPORTACION,
+    CARPETA_ASSETS,
     listar_carpetas_respaldo,
     eliminar_carpeta_respaldo,
     eliminar_todas_las_carpetas_respaldo,
 )
+
+
+class TestCarpetaAssets(unittest.TestCase):
+    """
+    Regresion para el bug donde los PDF exportados salian sin logo al
+    correr como ejecutable compilado: la ruta de "assets" era relativa
+    al directorio de trabajo actual, que en un .exe --onefile de
+    Nuitka es una carpeta temporal distinta en cada arranque.
+    """
+
+    def test_carpeta_assets_es_una_ruta_absoluta_que_existe(self):
+        self.assertTrue(os.path.isabs(CARPETA_ASSETS))
+        self.assertTrue(os.path.isdir(CARPETA_ASSETS))
+
+    def test_carpeta_assets_se_resuelve_igual_sin_importar_el_directorio_de_trabajo(self):
+        """
+        Corre en un subproceso con el directorio de trabajo puesto en
+        /tmp (o el temporal del sistema), imitando lo que le pasa a un
+        .exe que se auto-extrae a una carpeta temporal: la ruta de
+        assets no debe depender de "desde donde" se ejecuta Maxwell.
+        """
+        raiz_del_proyecto = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        codigo = (
+            "import sys; sys.path.insert(0, %r); "
+            "from utils.exportar import CARPETA_ASSETS; "
+            "import os; print(CARPETA_ASSETS); sys.exit(0 if os.path.isdir(CARPETA_ASSETS) else 1)"
+        ) % raiz_del_proyecto
+
+        directorio_ajeno = os.path.dirname(os.path.abspath(__file__))  # cualquier dir != raiz del proyecto
+        resultado = subprocess.run(
+            [sys.executable, "-c", codigo],
+            cwd="/tmp" if os.path.isdir("/tmp") else directorio_ajeno,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(resultado.returncode, 0, msg=resultado.stdout + resultado.stderr)
 
 
 class TestExportarTodoPdf(unittest.TestCase):
