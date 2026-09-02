@@ -5,6 +5,7 @@ Modulo de conexion y creacion de la base de datos SQLite.
 """
 
 import sqlite3
+from contextlib import contextmanager
 
 NOMBRE_BASE_DATOS = "maxwell_medic.db"
 
@@ -66,6 +67,59 @@ def obtener_conexion():
             "renombra ese archivo para hacer una copia de respaldo y volve a abrir "
             "Maxwell: se va a crear una base de datos nueva y vacia."
         ) from error
+
+
+@contextmanager
+def conexion_segura():
+    """
+    Context manager para usar en los modelos en vez de llamar a
+    obtener_conexion() a mano.
+
+    obtener_conexion() ya traduce los errores que pasan al ABRIR la
+    conexion (archivo corrupto, bloqueado, etc.) a excepciones propias
+    con un mensaje claro. Pero una conexion abierta con exito igual
+    puede fallar despues, durante un cursor.execute() o un commit()
+    (por ejemplo, si el archivo se daña a mitad de una operacion, o si
+    el bloqueo aparece recien en la escritura). Sin este context
+    manager, ese error crudo de sqlite3 se escapaba tal cual desde
+    varios metodos de los modelos (sobre todo los de solo lectura o
+    baja logica, que no tenian try/except propio) hasta la interfaz de
+    usuario, mostrando un traceback tecnico en vez de un mensaje
+    entendible.
+
+    Uso:
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(...)
+            conexion.commit()
+
+    La conexion se cierra siempre (haya error o no). Los errores de
+    integridad (sqlite3.IntegrityError, por ejemplo un DNI o legajo
+    duplicado) se dejan pasar sin traducir: no son un problema del
+    archivo de base de datos sino de los datos ingresados, y ya se
+    muestran con un mensaje adecuado en el menu que los captura.
+    """
+    conexion = obtener_conexion()
+    try:
+        yield conexion
+    except sqlite3.IntegrityError:
+        raise
+    except sqlite3.DatabaseError as error:
+        mensaje_original = str(error).lower()
+        if "locked" in mensaje_original or "busy" in mensaje_original:
+            raise BaseDeDatosBloqueadaError(
+                "No se pudo completar la operacion porque la base de datos esta "
+                "bloqueada. Es posible que haya otra instancia de Maxwell abierta "
+                "al mismo tiempo; cerrala y volve a intentar."
+            ) from error
+        raise BaseDeDatosCorruptaError(
+            f"El archivo '{NOMBRE_BASE_DATOS}' fallo durante una operacion (puede "
+            "estar corrupto o danado). Si el problema persiste, renombra ese "
+            "archivo para hacer una copia de respaldo y volve a abrir Maxwell: se "
+            "va a crear una base de datos nueva y vacia."
+        ) from error
+    finally:
+        conexion.close()
 
 
 def crear_tablas():

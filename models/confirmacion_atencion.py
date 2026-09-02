@@ -14,7 +14,7 @@ cargar manualmente en el sistema principal cuando vuelva a estar
 disponible.
 """
 
-from database import obtener_conexion
+from database import conexion_segura
 from utils.validaciones import validar_dni
 
 
@@ -46,8 +46,7 @@ class ConfirmacionAtencion:
 
         validar_dni(self.paciente_dni)
 
-        conexion = obtener_conexion()
-        try:
+        with conexion_segura() as conexion:
             cursor = conexion.cursor()
             cursor.execute(
                 "INSERT INTO confirmaciones_atencion (codigo_turno, paciente_dni, observaciones) VALUES (?, ?, ?)",
@@ -55,8 +54,6 @@ class ConfirmacionAtencion:
             )
             conexion.commit()
             self.id = cursor.lastrowid
-        finally:
-            conexion.close()
         return self.id
 
     @staticmethod
@@ -66,40 +63,36 @@ class ConfirmacionAtencion:
 
     @staticmethod
     def listar_todas():
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(f"SELECT {ConfirmacionAtencion.CAMPOS_SELECT} FROM confirmaciones_atencion")
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(f"SELECT {ConfirmacionAtencion.CAMPOS_SELECT} FROM confirmaciones_atencion")
+            filas = cursor.fetchall()
         return ConfirmacionAtencion._filas_a_confirmaciones(filas)
 
     @staticmethod
     def listar_pendientes_de_exportar():
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            f"SELECT {ConfirmacionAtencion.CAMPOS_SELECT} FROM confirmaciones_atencion WHERE exportado = 0"
-        )
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(
+                f"SELECT {ConfirmacionAtencion.CAMPOS_SELECT} FROM confirmaciones_atencion WHERE exportado = 0"
+            )
+            filas = cursor.fetchall()
         return ConfirmacionAtencion._filas_a_confirmaciones(filas)
 
     @staticmethod
     def contar_pendientes_de_exportar():
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("SELECT COUNT(*) FROM confirmaciones_atencion WHERE exportado = 0")
-        cantidad = cursor.fetchone()[0]
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT COUNT(*) FROM confirmaciones_atencion WHERE exportado = 0")
+            cantidad = cursor.fetchone()[0]
         return cantidad
 
     @staticmethod
     def marcar_todas_como_exportadas():
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("UPDATE confirmaciones_atencion SET exportado = 1 WHERE exportado = 0")
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("UPDATE confirmaciones_atencion SET exportado = 1 WHERE exportado = 0")
+            conexion.commit()
 
     @staticmethod
     def eliminar_todas():
@@ -109,8 +102,7 @@ class ConfirmacionAtencion:
         despues de exportar: son informacion transitoria de una
         jornada de emergencia, no un registro permanente.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("DELETE FROM confirmaciones_atencion")
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("DELETE FROM confirmaciones_atencion")
+            conexion.commit()

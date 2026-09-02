@@ -5,9 +5,13 @@ Tests automaticos del modelo Medico.
 """
 
 import os
+import sqlite3
 import unittest
+import unittest.mock
+from unittest.mock import patch
 
 import database
+from database import BaseDeDatosCorruptaError
 from models.medico import Medico
 
 
@@ -31,6 +35,23 @@ class TestMedico(unittest.TestCase):
         encontrado = Medico.buscar_por_legajo("MED001")
         self.assertIsNotNone(encontrado)
         self.assertEqual(encontrado.especialidad, "Pediatria")
+
+    def test_listar_todos_traduce_error_crudo_de_sqlite_a_error_claro(self):
+        """
+        Menu.listar_todos() se llama desde el menu sin un try/except
+        propio (a diferencia de "dar de alta", que si tiene uno). Si el
+        cursor falla a mitad de la consulta, el modelo debe traducir el
+        error crudo de sqlite3 a una excepcion propia con mensaje claro,
+        en vez de dejarlo escapar tal cual.
+        """
+        self._crear_medico_valido().guardar()
+        conexion_falsa = unittest.mock.MagicMock()
+        conexion_falsa.cursor.return_value.execute.side_effect = sqlite3.DatabaseError(
+            "database disk image is malformed"
+        )
+        with patch("database.obtener_conexion", return_value=conexion_falsa):
+            with self.assertRaises(BaseDeDatosCorruptaError):
+                Medico.listar_todos()
 
     def test_no_permite_legajo_duplicado(self):
         self._crear_medico_valido().guardar()

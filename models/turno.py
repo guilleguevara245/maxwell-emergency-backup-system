@@ -12,7 +12,7 @@ El campo "exportado" indica si la solicitud ya fue enviada al sistema
 principal (via la exportacion a CSV).
 """
 
-from database import obtener_conexion
+from database import conexion_segura
 
 
 def _validar_referencias(paciente_dni, medico_legajo):
@@ -79,8 +79,7 @@ class Turno:
 
         _validar_referencias(self.paciente_dni, self.medico_legajo)
 
-        conexion = obtener_conexion()
-        try:
+        with conexion_segura() as conexion:
             cursor = conexion.cursor()
             cursor.execute(
                 """
@@ -93,8 +92,6 @@ class Turno:
             )
             conexion.commit()
             self.id = cursor.lastrowid
-        finally:
-            conexion.close()
         return self.id
 
     @staticmethod
@@ -111,41 +108,38 @@ class Turno:
         al cancelar una solicitud, sin necesidad de que el usuario
         conozca el ID interno.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            f"""
-            SELECT {Turno.CAMPOS_SELECT} FROM turnos
-            WHERE date(fecha_registro) = date('now')
-            ORDER BY fecha_registro
-            """
-        )
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(
+                f"""
+                SELECT {Turno.CAMPOS_SELECT} FROM turnos
+                WHERE date(fecha_registro) = date('now')
+                ORDER BY fecha_registro
+                """
+            )
+            filas = cursor.fetchall()
         return Turno._filas_a_turnos(filas)
 
     @staticmethod
     def listar_por_medico(medico_legajo):
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE medico_legajo = ? ORDER BY fecha_registro",
-            (medico_legajo,),
-        )
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(
+                f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE medico_legajo = ? ORDER BY fecha_registro",
+                (medico_legajo,),
+            )
+            filas = cursor.fetchall()
         return Turno._filas_a_turnos(filas)
 
     @staticmethod
     def listar_por_paciente(paciente_dni):
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE paciente_dni = ? ORDER BY fecha_registro",
-            (paciente_dni,),
-        )
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(
+                f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE paciente_dni = ? ORDER BY fecha_registro",
+                (paciente_dni,),
+            )
+            filas = cursor.fetchall()
         return Turno._filas_a_turnos(filas)
 
     @staticmethod
@@ -154,11 +148,10 @@ class Turno:
         Devuelve las solicitudes que todavia no fueron enviadas al
         sistema principal (exportado = 0).
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE exportado = 0")
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE exportado = 0")
+            filas = cursor.fetchall()
         return Turno._filas_a_turnos(filas)
 
     @staticmethod
@@ -166,11 +159,10 @@ class Turno:
         """
         Cuenta cuantas solicitudes todavia no se enviaron al sistema principal.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("SELECT COUNT(*) FROM turnos WHERE exportado = 0")
-        cantidad = cursor.fetchone()[0]
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("SELECT COUNT(*) FROM turnos WHERE exportado = 0")
+            cantidad = cursor.fetchone()[0]
         return cantidad
 
     @staticmethod
@@ -179,22 +171,20 @@ class Turno:
         Marca todas las solicitudes pendientes como ya enviadas al
         sistema principal. Se llama despues de generar la exportacion a CSV.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("UPDATE turnos SET exportado = 1 WHERE exportado = 0")
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("UPDATE turnos SET exportado = 1 WHERE exportado = 0")
+            conexion.commit()
 
     @staticmethod
     def buscar_por_id(id_turno):
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE id = ?",
-            (id_turno,),
-        )
-        fila = cursor.fetchone()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(
+                f"SELECT {Turno.CAMPOS_SELECT} FROM turnos WHERE id = ?",
+                (id_turno,),
+            )
+            fila = cursor.fetchone()
         if fila is None:
             return None
         return Turno._filas_a_turnos([fila])[0]
@@ -220,11 +210,10 @@ class Turno:
         sistema principal, no tiene sentido conservarla ni contarla
         como pendiente de exportar.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("DELETE FROM turnos WHERE id = ?", (id_turno,))
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("DELETE FROM turnos WHERE id = ?", (id_turno,))
+            conexion.commit()
 
     @staticmethod
     def eliminar_todos():
@@ -234,11 +223,10 @@ class Turno:
         despues de exportar: las solicitudes son informacion transitoria
         de una jornada de emergencia, no un registro permanente.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("DELETE FROM turnos")
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("DELETE FROM turnos")
+            conexion.commit()
 
     def cambiar_estado(self, nuevo_estado):
         """
@@ -249,9 +237,8 @@ class Turno:
         if nuevo_estado not in Turno.ESTADOS_VALIDOS:
             raise ValueError(f"Estado invalido: {nuevo_estado}")
 
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("UPDATE turnos SET estado = ? WHERE id = ?", (nuevo_estado, self.id))
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("UPDATE turnos SET estado = ? WHERE id = ?", (nuevo_estado, self.id))
+            conexion.commit()
         self.estado = nuevo_estado
