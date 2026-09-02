@@ -11,7 +11,7 @@ se pidio, motivo y observaciones) para cargarlas despues en el sistema
 principal, que es quien asigna la fecha y hora real.
 """
 
-from database import crear_tablas
+from database import crear_tablas, BaseDeDatosCorruptaError, BaseDeDatosBloqueadaError
 from models.paciente import Paciente
 from models.medico import Medico
 from models.turno import Turno
@@ -24,6 +24,24 @@ from utils.exportar import (
 )
 
 ANCHO_CAJA = 60
+
+
+def _configurar_titulo_de_ventana(titulo="Maxwell Emergency Backup System"):
+    """
+    Cambia el titulo de la ventana de la consola (por defecto Windows
+    le pone la ruta desde la que se ejecuto el .exe). Si no se puede
+    (por ejemplo, en Linux/Mac o corriendo sin terminal), simplemente
+    no hace nada.
+    """
+    try:
+        import ctypes
+        ctypes.windll.kernel32.SetConsoleTitleW(titulo)
+    except Exception:
+        try:
+            import os
+            os.system(f"printf '\\033]0;{titulo}\\007'")
+        except Exception:
+            pass
 
 
 # ---------- INTERFAZ DE CONSOLA ----------
@@ -251,7 +269,7 @@ def menu_turnos():
             "Registrar una solicitud de turno",
             "Listar solicitudes por paciente",
             "Cancelar una solicitud",
-            "Registrar turno atendido (codigo del sistema principal + DNI)",
+            "Registrar turno atendido",
         ], texto_volver="Volver al menu principal")
         opcion = elegir_opcion()
 
@@ -406,6 +424,7 @@ def menu_respaldos():
 # ---------- MENU PRINCIPAL ----------
 
 def menu_principal():
+    _configurar_titulo_de_ventana()
     crear_tablas()
     while True:
         pendientes_turnos = Turno.contar_pendientes_de_exportar()
@@ -465,3 +484,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print()
         despedida()
+    except (BaseDeDatosCorruptaError, BaseDeDatosBloqueadaError) as error:
+        err(str(error))
+        esperar_tecla("Presiona una tecla para salir...")

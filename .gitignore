@@ -9,6 +9,11 @@ build/
 dist/
 *.spec
 
+# Artefactos de Nuitka (compilacion a .exe)
+*.build/
+*.dist/
+*.onefile-build/
+
 # Archivos de Python
 __pycache__/
 *.pyc

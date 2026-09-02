@@ -1,10 +1,11 @@
 <p align="center">
-  <img src="assets/logo_maxwell.jpg" alt="Maxwell Emergency Backup System" width="650">
+  <img src="assets/logo_maxwell.jpg" alt="Maxwell Emergency Backup System" width="800">
 </p>
 
 <p align="center">
+  <img src="https://github.com/guilleguevara245/maxwell-emergency-backup-system/actions/workflows/tests.yml/badge.svg" alt="Estado de los tests">
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-91%20passing-brightgreen" alt="91 tests passing">
+  <img src="https://img.shields.io/badge/tests-93%20passing-brightgreen" alt="93 tests passing">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT License">
   <img src="https://img.shields.io/badge/status-stable-success" alt="Stable">
 </p>
@@ -39,7 +40,7 @@ Del mismo modo, cada uso de Maxwell se trata como un evento aislado: al exportar
 - Exportación de todos los datos a PDF con identidad visual propia, organizados en una carpeta con la fecha del día
 - Limpieza automática del estado transitorio después de cada exportación, preservando el padrón de médicos
 - Validaciones de formato en todos los datos sensibles (DNI, email, teléfono, legajo)
-- Suite de 91 tests automáticos cubriendo la totalidad de la lógica de negocio
+- Suite de 93 tests automáticos cubriendo la totalidad de la lógica de negocio
 
 ## Tecnologías
 
@@ -62,7 +63,7 @@ maxwell-emergency-backup-system/
 ├── utils/
 │   ├── validaciones.py            # Validaciones de formato reutilizables
 │   └── exportar.py                # Exportacion a PDF y limpieza post-exportacion
-├── tests/                         # 91 tests automaticos (unittest)
+├── tests/                         # 93 tests automaticos (unittest)
 ├── assets/                        # Logo e imagenes de cabecera de los PDF
 ├── README.md
 ├── requirements.txt
@@ -91,18 +92,19 @@ El sistema crea automáticamente la base de datos local en el primer uso. Al exp
 python -m unittest discover -s tests -v
 ```
 
-La suite cubre la totalidad de los modelos y las validaciones de negocio: creación y borrado de entidades, restricciones de formato, prevención de duplicados, y el ciclo completo de exportación y limpieza de datos.
+La suite cubre la totalidad de los modelos y las validaciones de negocio: creación y borrado de entidades, restricciones de formato, prevención de duplicados, el ciclo completo de exportación y limpieza de datos, y el manejo de errores de la base de datos (archivo corrupto, escrituras concurrentes desde más de una instancia). Un workflow de GitHub Actions corre automáticamente toda la suite en Python 3.10, 3.11 y 3.12 en cada `push` y `pull request` a `main`.
 
-## Ejecutable standalone (Windows)
+## Ejecutable para Windows
 
-Para un consultorio sin Python instalado, Maxwell se puede empaquetar como un `.exe` autocontenido con [PyInstaller](https://pyinstaller.org/):
+Para un consultorio sin Python instalado, Maxwell se puede compilar a un `.exe` autocontenido con [Nuitka](https://nuitka.net/):
 
-```bash
-pip install pyinstaller
-pyinstaller --onefile --name Maxwell main.py
-```
+1. Hacer doble clic en `build_exe.bat`.
+2. Esperar a que termine. La primera vez tarda varios minutos (puede ser 5 o más, según la PC), porque instala Nuitka y descarga el compilador que necesita para generar el ejecutable.
+3. Cuando la ventana muestra `Presiona una tecla para continuar...`, ya terminó: el ejecutable quedó en `dist\Maxwell.exe`, con la carpeta `assets/` y el ícono de Maxwell ya incluidos adentro.
 
-El ejecutable queda en `dist/Maxwell.exe`. Es necesario copiar la carpeta `assets/` junto al `.exe` (PyInstaller no empaqueta esos archivos automáticamente con `--onefile`), ya que son las imágenes de cabecera de los PDF generados.
+Para compartir Maxwell con un consultorio alcanza con copiarles la carpeta `dist` completa (o directamente el archivo `Maxwell.exe` de adentro): no hace falta instalar nada más, ni Python ni ninguna otra dependencia.
+
+Se usa Nuitka en lugar de PyInstaller porque compila a un binario nativo (en vez de empaquetar el intérprete de Python), lo que da mejor rendimiento y muchos menos falsos positivos de antivirus.
 
 ## Estado del proyecto y versión estable
 
