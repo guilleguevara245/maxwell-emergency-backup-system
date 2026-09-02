@@ -10,7 +10,7 @@ Usa borrado logico: "eliminar" marca al medico como inactivo,
 no borra el registro (para conservar el historial de turnos).
 """
 
-from database import obtener_conexion
+from database import conexion_segura
 from utils.validaciones import validar_legajo, validar_dni, validar_telefono, validar_email
 
 
@@ -40,8 +40,7 @@ class Medico:
         validar_telefono(self.telefono)
         validar_email(self.email)
 
-        conexion = obtener_conexion()
-        try:
+        with conexion_segura() as conexion:
             cursor = conexion.cursor()
             cursor.execute(
                 """
@@ -52,8 +51,6 @@ class Medico:
                  self.especialidad, self.telefono, self.email),
             )
             conexion.commit()
-        finally:
-            conexion.close()
 
     @staticmethod
     def listar_todos(incluir_inactivos=False):
@@ -61,15 +58,14 @@ class Medico:
         Devuelve una lista con los medicos registrados.
         Por defecto solo devuelve los activos.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        consulta = ("SELECT legajo, dni, nombre, apellido, especialidad, telefono, "
-                    "email, activo, fecha_registro FROM medicos")
-        if not incluir_inactivos:
-            consulta += " WHERE activo = 1"
-        cursor.execute(consulta)
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            consulta = ("SELECT legajo, dni, nombre, apellido, especialidad, telefono, "
+                        "email, activo, fecha_registro FROM medicos")
+            if not incluir_inactivos:
+                consulta += " WHERE activo = 1"
+            cursor.execute(consulta)
+            filas = cursor.fetchall()
 
         return [Medico(legajo=f[0], dni=f[1], nombre=f[2], apellido=f[3], especialidad=f[4],
                         telefono=f[5], email=f[6], activo=f[7], fecha_registro=f[8])
@@ -80,17 +76,16 @@ class Medico:
         """
         Busca un medico por su legajo (activo o inactivo). Devuelve None si no existe.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            """
-            SELECT legajo, dni, nombre, apellido, especialidad, telefono, email, activo, fecha_registro
-            FROM medicos WHERE legajo = ?
-            """,
-            (legajo,),
-        )
-        fila = cursor.fetchone()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(
+                """
+                SELECT legajo, dni, nombre, apellido, especialidad, telefono, email, activo, fecha_registro
+                FROM medicos WHERE legajo = ?
+                """,
+                (legajo,),
+            )
+            fila = cursor.fetchone()
 
         if fila is None:
             return None
@@ -105,17 +100,16 @@ class Medico:
         La comparacion no distingue mayusculas de minusculas (COLLATE NOCASE),
         para que "Pediatria", "pediatria" y "PEDIATRIA" encuentren lo mismo.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            """
-            SELECT legajo, dni, nombre, apellido, especialidad, telefono, email, activo, fecha_registro
-            FROM medicos WHERE especialidad = ? COLLATE NOCASE AND activo = 1
-            """,
-            (especialidad,),
-        )
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(
+                """
+                SELECT legajo, dni, nombre, apellido, especialidad, telefono, email, activo, fecha_registro
+                FROM medicos WHERE especialidad = ? COLLATE NOCASE AND activo = 1
+                """,
+                (especialidad,),
+            )
+            filas = cursor.fetchall()
 
         return [Medico(legajo=f[0], dni=f[1], nombre=f[2], apellido=f[3], especialidad=f[4],
                         telefono=f[5], email=f[6], activo=f[7], fecha_registro=f[8]) for f in filas]
@@ -127,8 +121,7 @@ class Medico:
         validar_telefono(self.telefono)
         validar_email(self.email)
 
-        conexion = obtener_conexion()
-        try:
+        with conexion_segura() as conexion:
             cursor = conexion.cursor()
             cursor.execute(
                 """
@@ -140,8 +133,6 @@ class Medico:
                  self.telefono, self.email, self.legajo),
             )
             conexion.commit()
-        finally:
-            conexion.close()
 
     @staticmethod
     def eliminar(legajo):
@@ -149,19 +140,17 @@ class Medico:
         Borrado logico: marca al medico como inactivo en vez de
         borrar el registro, para conservar el historial de turnos.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("UPDATE medicos SET activo = 0 WHERE legajo = ?", (legajo,))
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("UPDATE medicos SET activo = 0 WHERE legajo = ?", (legajo,))
+            conexion.commit()
 
     @staticmethod
     def reactivar(legajo):
         """
         Revierte un borrado logico: vuelve a marcar al medico como activo.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("UPDATE medicos SET activo = 1 WHERE legajo = ?", (legajo,))
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("UPDATE medicos SET activo = 1 WHERE legajo = ?", (legajo,))
+            conexion.commit()

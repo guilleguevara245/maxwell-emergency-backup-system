@@ -8,7 +8,7 @@ Usa borrado logico: "eliminar" marca al paciente como inactivo,
 no borra el registro (para conservar el historial de turnos).
 """
 
-from database import obtener_conexion
+from database import conexion_segura
 from utils.validaciones import validar_dni, validar_email, validar_telefono, validar_telefono_fijo
 
 
@@ -38,8 +38,7 @@ class Paciente:
         validar_telefono_fijo(self.telefono_fijo)
         validar_email(self.email)
 
-        conexion = obtener_conexion()
-        try:
+        with conexion_segura() as conexion:
             cursor = conexion.cursor()
             cursor.execute(
                 """
@@ -49,8 +48,6 @@ class Paciente:
                 (self.dni, self.nombre, self.apellido, self.telefono, self.telefono_fijo, self.email),
             )
             conexion.commit()
-        finally:
-            conexion.close()
 
     @staticmethod
     def listar_todos(incluir_inactivos=False):
@@ -58,15 +55,14 @@ class Paciente:
         Devuelve una lista con los pacientes registrados.
         Por defecto solo devuelve los activos.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        consulta = ("SELECT dni, nombre, apellido, telefono, telefono_fijo, "
-                    "email, activo, fecha_registro FROM pacientes")
-        if not incluir_inactivos:
-            consulta += " WHERE activo = 1"
-        cursor.execute(consulta)
-        filas = cursor.fetchall()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            consulta = ("SELECT dni, nombre, apellido, telefono, telefono_fijo, "
+                        "email, activo, fecha_registro FROM pacientes")
+            if not incluir_inactivos:
+                consulta += " WHERE activo = 1"
+            cursor.execute(consulta)
+            filas = cursor.fetchall()
 
         return [Paciente(dni=f[0], nombre=f[1], apellido=f[2], telefono=f[3],
                           telefono_fijo=f[4], email=f[5], activo=f[6], fecha_registro=f[7])
@@ -77,17 +73,16 @@ class Paciente:
         """
         Busca un paciente por su DNI (activo o inactivo). Devuelve None si no existe.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute(
-            """
-            SELECT dni, nombre, apellido, telefono, telefono_fijo, email, activo, fecha_registro
-            FROM pacientes WHERE dni = ?
-            """,
-            (dni,),
-        )
-        fila = cursor.fetchone()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute(
+                """
+                SELECT dni, nombre, apellido, telefono, telefono_fijo, email, activo, fecha_registro
+                FROM pacientes WHERE dni = ?
+                """,
+                (dni,),
+            )
+            fila = cursor.fetchone()
 
         if fila is None:
             return None
@@ -103,8 +98,7 @@ class Paciente:
         validar_telefono_fijo(self.telefono_fijo)
         validar_email(self.email)
 
-        conexion = obtener_conexion()
-        try:
+        with conexion_segura() as conexion:
             cursor = conexion.cursor()
             cursor.execute(
                 """
@@ -116,8 +110,6 @@ class Paciente:
                  self.telefono_fijo, self.email, self.dni),
             )
             conexion.commit()
-        finally:
-            conexion.close()
 
     @staticmethod
     def eliminar(dni):
@@ -125,22 +117,20 @@ class Paciente:
         Borrado logico: marca al paciente como inactivo en vez de
         borrar el registro, para conservar el historial de turnos.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("UPDATE pacientes SET activo = 0 WHERE dni = ?", (dni,))
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("UPDATE pacientes SET activo = 0 WHERE dni = ?", (dni,))
+            conexion.commit()
 
     @staticmethod
     def reactivar(dni):
         """
         Revierte un borrado logico: vuelve a marcar al paciente como activo.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("UPDATE pacientes SET activo = 1 WHERE dni = ?", (dni,))
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("UPDATE pacientes SET activo = 1 WHERE dni = ?", (dni,))
+            conexion.commit()
 
     @staticmethod
     def eliminar_todos():
@@ -150,8 +140,7 @@ class Paciente:
         de exportar los datos: los pacientes son informacion transitoria
         de una jornada de emergencia, no un registro permanente.
         """
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("DELETE FROM pacientes")
-        conexion.commit()
-        conexion.close()
+        with conexion_segura() as conexion:
+            cursor = conexion.cursor()
+            cursor.execute("DELETE FROM pacientes")
+            conexion.commit()

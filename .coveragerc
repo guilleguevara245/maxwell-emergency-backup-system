@@ -1,0 +1,18 @@
+# main.py es la capa de menu interactivo (input()/print()): delega toda
+# la logica de negocio en models/ y utils/, que si estan cubiertos por
+# tests. Se excluye de la medicion de cobertura para que el numero
+# refleje la lógica de negocio real y no ruido de I/O de consola.
+[run]
+source = .
+omit =
+    tests/*
+    build_exe.bat
+    */__pycache__/*
+    venv/*
+    .venv/*
+    main.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:

@@ -4,8 +4,9 @@
 
 <p align="center">
   <img src="https://github.com/guilleguevara245/maxwell-emergency-backup-system/actions/workflows/tests.yml/badge.svg" alt="Estado de los tests">
+  <img src="coverage.svg" alt="Cobertura de tests">
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue" alt="Python 3.10+">
-  <img src="https://img.shields.io/badge/tests-93%20passing-brightgreen" alt="93 tests passing">
+  <img src="https://img.shields.io/badge/tests-98%20passing-brightgreen" alt="98 tests passing">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT License">
   <img src="https://img.shields.io/badge/status-stable-success" alt="Stable">
 </p>
@@ -40,7 +41,7 @@ Del mismo modo, cada uso de Maxwell se trata como un evento aislado: al exportar
 - Exportación de todos los datos a PDF con identidad visual propia, organizados en una carpeta con la fecha del día
 - Limpieza automática del estado transitorio después de cada exportación, preservando el padrón de médicos
 - Validaciones de formato en todos los datos sensibles (DNI, email, teléfono, legajo)
-- Suite de 93 tests automáticos cubriendo la totalidad de la lógica de negocio
+- Suite de 98 tests automáticos cubriendo la totalidad de la lógica de negocio
 
 ## Tecnologías
 
@@ -63,7 +64,7 @@ maxwell-emergency-backup-system/
 ├── utils/
 │   ├── validaciones.py            # Validaciones de formato reutilizables
 │   └── exportar.py                # Exportacion a PDF y limpieza post-exportacion
-├── tests/                         # 93 tests automaticos (unittest)
+├── tests/                         # 98 tests automaticos (unittest)
 ├── assets/                        # Logo e imagenes de cabecera de los PDF
 ├── README.md
 ├── requirements.txt
