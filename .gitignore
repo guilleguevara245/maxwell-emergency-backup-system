@@ -29,3 +29,8 @@ Thumbs.db
 # Configuración de editores
 .vscode/
 .idea/
+
+# Reporte intermedio de coverage.py (se regenera en cada corrida de CI,
+# no hace falta versionarlo; coverage.svg si se versiona)
+.coverage
+coverage.json
